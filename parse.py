@@ -1,5 +1,10 @@
 WORD_LIST_TEXT_FILE = 'data/raw/final.txt'
 OUTPUT_DIR = 'data/out/articles'
+THREADS = 2
+PROXIES = [
+    "http://107.172.4.200:1080",
+    None
+]
 
 from bs4 import BeautifulSoup
 import json
@@ -10,6 +15,8 @@ import requests
 import os
 from pathlib import Path
 import urllib.parse as urlencode
+import threading
+import random
 
 
 def load_word_html_data(word, session):
@@ -101,26 +108,68 @@ def write_word_definition(word, defs):
         f.write(json_data)
 
 
+def chunk_them(xs, n):
+    '''Split the list, xs, into n chunks'''
+    L = len(xs)
+    assert 0 < n <= L
+    s = L // n
+    return [xs[p:p + s] for p in range(0, L, s)]
+
+
+ua = UserAgent()
+
+
+def random_proxy():
+    return random.choice(PROXIES)
+
+
+def worker(thread_id, words):
+    n = len(words)
+    proxy = random_proxy()
+
+    print("Started worker for N = {} words with proxy {}".format(n, proxy))
+
+    session = create_new_session(ua, proxy=proxy)
+
+    i = 1
+    for word in words:
+        print("THREAD #{} -> [{}/{}] processing word: {}".format(thread_id, i, n, word))
+        if not is_there_definition(word):
+            word_defs = download_word_definition(word, session=session)
+            write_word_definition(word, word_defs)
+        i += 1
+
+
 def main():
     print("loading the word list")
     words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
 
-    print("creating a session")
-    ua = UserAgent()
-    s = create_new_session(ua, proxy="http://107.172.4.200:1080")
+    word_chunks = chunk_them(words, THREADS)
 
-    # d = download_word_definition(words[0], s)
-    # write_word_definition(words[0], d)
-    # print(d)
+    threads = []
+    thread_id = 1
+    for chunk in word_chunks:
+        thread = threading.Thread(target=worker, args=(thread_id, chunk,))
+        thread.start()
+        threads.append(thread)
+        thread_id += 1
 
-    all = len(words)
-    i = 1
-    for word in words:
-        print("[{}/{}] processing word: {}".format(i, all, word))
-        if not is_there_definition(word):
-            word_defs = download_word_definition(word, session=s)
-            write_word_definition(word, word_defs)
-        i += 1
+    for thread in threads:
+        thread.join()
+
+    print("DONE!")
+
+    return
+
+    # print("creating a session")
+    #
+    #
+    #
+    # # d = download_word_definition(words[0], s)
+    # # write_word_definition(words[0], d)
+    # # print(d)
+    #
+
 
 
 if __name__ == '__main__':
