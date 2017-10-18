@@ -1,0 +1,4 @@
+#!/bin/sh
+docker stop word_def_instance
+docker rm word_def_instance
+docker run -p 18188:18188 -d --name word_def_instance --restart="always" tirinox/word_def
