@@ -31,8 +31,11 @@ def get_word_def_dic_from_redis(r, word):
 def read_all_words_from_dictionary(dictionary_filename):
     with codecs.open(dictionary_filename, 'r', encoding='utf-8') as f:
         content = f.readlines()
+
     # you may also want to remove whitespace characters like `\n` at the end of each line
-    return [x.strip() for x in content]
+    content = [x.strip() for x in content]
+    content.sort(key=len)
+    return content
 
 
 def create_new_session(user_agent_generator, proxy=None):

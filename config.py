@@ -1,6 +1,6 @@
 WORD_LIST_TEXT_FILE = 'data/raw/final.txt'
 OUTPUT_DIR = 'data/out/articles'
-THREADS = 8
+THREADS = 1
 PROXIES = [
     "http://107.172.4.200:1080",
     "http://185.174.63.188:3128",
