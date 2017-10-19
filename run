@@ -1,4 +1,11 @@
 #!/bin/sh
+
+docker network create word_def_network
+
+docker stop redis_word_def_instance
+docker rm redis_word_def_instance
+docker run -p 6379:6379 -d -v "/tmp/redis:/data" --name redis_word_def_instance --net=word_def_network --restart="always" redis:4
+
 docker stop word_def_instance
 docker rm word_def_instance
-docker run -p 34001:34001 -d --name word_def_instance --restart="always" tirinox/word-def:latest
+docker run -p 34001:34001 -d --name word_def_instance --net=word_def_network --restart="always" tirinox/word-def:latest
