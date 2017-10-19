@@ -6,6 +6,9 @@ PROXIES = [
     "http://185.174.63.188:3128",
     None
 ]
-REDIS_HOST = 'redis_word_def_instance' #'localhost'
+
+REDIS_HOST = 'redis_word_def_instance'  # FOR LIVE SERVER
+# REDIS_HOST = 'localhost' # for developement (local)
+
 REDIS_PORT = '6379'
 REDIS_DB = 0
