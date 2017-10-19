@@ -28,13 +28,17 @@ def get_word_def_dic_from_redis(r, word):
     return json.loads(text) if text is not None else []
 
 
-def read_all_words_from_dictionary(dictionary_filename):
+def read_all_words_from_dictionary(dictionary_filename, max_num=None):
     with codecs.open(dictionary_filename, 'r', encoding='utf-8') as f:
         content = f.readlines()
 
     # you may also want to remove whitespace characters like `\n` at the end of each line
     content = [x.strip() for x in content]
     content.sort(key=len)
+
+    if max_num is not None:
+        content = content[:max_num]
+
     return content
 
 

@@ -34,11 +34,19 @@ def worker(thread_id, words):
     for word in words:
         print("THREAD #{} -> [{}/{}] processing word: {} (key: {})".format(thread_id, i, n, word, word_def_key(word)))
         if not is_there_definition(r, word, count_empty=False):
-            word_defs = academic_parse.download_word_definition(word, session=session)
-            save_to_redis(r, word, word_defs)
-            n_defs = len(word_defs)
-            if n_defs > 0:
-                print("{} defs added".format(n_defs))
+            try:
+                word_defs = academic_parse.download_word_definition(word, session=session)
+                save_to_redis(r, word, word_defs)
+                n_defs = len(word_defs)
+                if n_defs > 0:
+                    print("{} defs added".format(n_defs))
+                else:
+                    print("no defs")
+                    print(academic_parse.LAST_HTML)
+                    exit(-1)
+            except:
+                print("ERR!")
+
         i += 1
 
     print("THREAD #{} finished!".format(thread_id))
@@ -46,7 +54,7 @@ def worker(thread_id, words):
 
 def main():
     print("loading the word list")
-    words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
+    words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE, max_num=1000)
 
     word_chunks = chunk_them(words, THREADS)
 

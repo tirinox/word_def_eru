@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import urllib.parse as urlencode
 
+LAST_HTML = ''
 
 def load_word_html_data(word, session):
     word = urlencode.quote_plus(str(word))
@@ -49,11 +50,18 @@ def get_word_definitions(html_text):
         'id': 'found_articles'
     }).find_all('li')
 
-    definitions = [get_word_definition(a) for a in found_articles]
+    definitions = []
+    for article in found_articles:
+        try:
+            definition = get_word_definition(article)
+            definitions.append(definition)
+        except:
+            print("Academic parse error!")
 
     return definitions
 
 def download_word_definition(word, session):
     html_text = load_word_html_data(word, session)
+    LAST_HTML = html_text
     defs = get_word_definitions(html_text)
     return defs
