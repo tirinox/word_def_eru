@@ -52,3 +52,8 @@ def get_word_definitions(html_text):
     definitions = [get_word_definition(a) for a in found_articles]
 
     return definitions
+
+def download_word_definition(word, session):
+    html_text = load_word_html_data(word, session)
+    defs = get_word_definitions(html_text)
+    return defs

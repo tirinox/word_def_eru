@@ -1,10 +1,13 @@
 from util import *
 from config import *
+import academic_parse
+from fake_useragent import UserAgent
+
 
 def main():
-    r = get_redis()
-
-    test = get_word_def_dic_from_redis(r, 'АЭРОФИНИШЕР')[1]['href']
+    ua = UserAgent()
+    session = create_new_session(ua)
+    test = academic_parse.download_word_definition('ПАН', session)
     print(test)
 
 if __name__ == '__main__':

@@ -14,9 +14,13 @@ def word_def_key(word):
     return 'word_def_' + hashlib.sha1(word.encode('utf-8')).hexdigest()
 
 
-def is_there_definition(r, word):
+def is_there_definition(r, word, count_empty=True):
     entry = r.get(word_def_key(word))
-    return entry is not None # and entry != '[]'
+    if entry is None:
+        return False
+    if not count_empty and entry == "[]":
+        return False
+    return True
 
 
 def get_word_def_dic_from_redis(r, word):

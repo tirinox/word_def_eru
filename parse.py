@@ -7,12 +7,6 @@ import academic_parse
 from util import *
 
 
-def download_word_definition(word, session):
-    html_text = academic_parse.load_word_html_data(word, session)
-    defs = academic_parse.get_word_definitions(html_text)
-    return defs
-
-
 def save_to_redis(r, word, defs):
     key = word_def_key(word)
     def_json = json.dumps(defs, ensure_ascii=False)
@@ -39,9 +33,12 @@ def worker(thread_id, words):
     i = 1
     for word in words:
         print("THREAD #{} -> [{}/{}] processing word: {} (key: {})".format(thread_id, i, n, word, word_def_key(word)))
-        if not is_there_definition(r, word):
-            word_defs = download_word_definition(word, session=session)
+        if not is_there_definition(r, word, count_empty=False):
+            word_defs = academic_parse.download_word_definition(word, session=session)
             save_to_redis(r, word, word_defs)
+            n_defs = len(word_defs)
+            if n_defs > 0:
+                print("{} defs added".format(n_defs))
         i += 1
 
     print("THREAD #{} finished!".format(thread_id))
