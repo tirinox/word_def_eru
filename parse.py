@@ -54,7 +54,7 @@ def worker(thread_id, words):
 
 def main():
     print("loading the word list")
-    words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE, max_num=1000)
+    words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
 
     word_chunks = chunk_them(words, THREADS)
 
