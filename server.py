@@ -1,4 +1,5 @@
 DEBUG=False
+PORT=34001
 
 from flask import Flask, jsonify, json, Response
 from util import *
@@ -27,4 +28,4 @@ def index(word):
     return response
 
 if __name__ == '__main__':
-    app.run(debug=DEBUG)
+    app.run(debug=DEBUG, port=PORT, host='0.0.0.0')

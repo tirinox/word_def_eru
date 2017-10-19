@@ -21,7 +21,7 @@ def is_there_definition(r, word):
 
 def get_word_def_dic_from_redis(r, word):
     text = r.get(word_def_key(word))
-    return json.loads(text)
+    return json.loads(text) if text is not None else []
 
 
 def read_all_words_from_dictionary(dictionary_filename):
