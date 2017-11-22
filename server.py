@@ -8,7 +8,6 @@ redis_db = get_redis()
 
 app = Flask(__name__)
 
-
 @app.route('/<string:word>')
 def index(word):
 
