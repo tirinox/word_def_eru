@@ -60,6 +60,7 @@ def get_word_definitions(html_text):
 
     return definitions
 
+
 def download_word_definition(word, session):
     html_text = load_word_html_data(word, session)
     LAST_HTML = html_text

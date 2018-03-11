@@ -1,20 +1,59 @@
 import hashlib
 from config import *
-import redis
+from redis import Redis
 import json
 import codecs
 import requests
 
 
 def get_redis():
-    return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+    return Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
 
 
 def word_def_key(word):
     return 'word_def_' + hashlib.sha1(word.encode('utf-8')).hexdigest()
 
 
-def is_there_definition(r, word, count_empty=True):
+def save_to_redis(r: Redis, word, defs):
+    key = word_def_key(word)
+    def_json = json.dumps(defs, ensure_ascii=False)
+    r.set(key, def_json)
+
+
+
+MAX_DEF_LEN = 320
+
+
+def _find_definition(current_defs, def_text):
+    for current_def in current_defs:
+        if 'text' in current_def:
+            current_def_text = current_def['text']
+            if current_def_text == def_text:
+                return True
+    return False
+
+
+def append_word_defs(r: Redis, word, defs):
+    current_defs = get_word_def_dic_from_redis(r, word)
+
+    updated = False
+    for new_definition in defs:
+        if isinstance(new_definition, str) and len(new_definition) >= 3:
+            new_definition = new_definition.strip()
+            new_definition = new_definition[:MAX_DEF_LEN]
+
+            if not _find_definition(current_defs, new_definition):
+                current_defs.append({
+                    'text': new_definition
+                })
+                updated = True
+
+    if updated:
+        save_to_redis(r, word, current_defs)
+    return updated
+
+
+def is_there_definition(r: Redis, word, count_empty=True):
     entry = r.get(word_def_key(word))
     if entry is None:
         return False
@@ -60,3 +99,7 @@ def chunk_them(xs, n):
     assert 0 < n <= L
     s = L // n
     return [xs[p:p + s] for p in range(0, L, s)]
+
+
+def json_pp(json_data):
+    print(json.dumps(json_data, indent=4, ensure_ascii=False))

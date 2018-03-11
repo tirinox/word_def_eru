@@ -7,12 +7,6 @@ import academic_parse
 from util import *
 
 
-def save_to_redis(r, word, defs):
-    key = word_def_key(word)
-    def_json = json.dumps(defs, ensure_ascii=False)
-    r.set(key, def_json)
-
-
 ua = UserAgent()
 
 

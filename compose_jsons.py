@@ -10,8 +10,10 @@ import codecs
 import json
 import redis
 
+
 def get_file_list(path):
     return (file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file)))
+
 
 def read_one_word_def(filename):
     with codecs.open(os.path.join(IN_DIRECTORY, filename), 'r', encoding='utf-8') as f:
@@ -36,7 +38,6 @@ def compose_to_json_file(files):
     print("Writing the out file")
     with codecs.open(OUT_JSON_COMPOSITION, 'w', encoding='utf-8') as out_f:
         out_f.write(json.dumps(all_infos))
-
 
 
 def compose_to_redis(files):
