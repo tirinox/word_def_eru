@@ -3,3 +3,6 @@ data/dump.rdb
 redis_docker/base
 
 config.json
+
+__pycache__/
+.idea/workspace.xml
