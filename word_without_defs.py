@@ -2,8 +2,6 @@ from util import *
 import codecs
 
 def find_orphans(redis):
-
-
     words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
 
     orphans = []
