@@ -21,6 +21,9 @@ def find_orphans(redis):
     with codecs.open('data/orphans.txt', 'w', encoding='utf-8') as f:
         f.write("\n".join(orphans))
 
+    total = len(orphans)
+    print('Total: {}'.format(total))
+
 
 redis = get_redis()
 

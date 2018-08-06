@@ -1,5 +1,7 @@
-WORD_LIST_TEXT_FILE = 'data/raw/final.txt'
+WORD_LIST_TEXT_FILE = 'data/wordlist/final.txt'
+
 OUTPUT_DIR = 'data/out/articles'
+
 THREADS = 4
 PROXIES = [
     "http://107.172.4.200:1080",
