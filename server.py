@@ -1,7 +1,6 @@
 DEBUG = False
 PORT = 34001
 
-
 from flask import Flask, jsonify, json, Response, request
 from util import *
 

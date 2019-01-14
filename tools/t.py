@@ -1,6 +1,6 @@
 from util import *
 from config import *
-import academic_parse
+from tools import academic_parse
 from fake_useragent import UserAgent
 
 # ua = UserAgent()

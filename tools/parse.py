@@ -3,7 +3,7 @@ from fake_useragent import UserAgent
 import threading
 import random
 
-import academic_parse
+from tools import academic_parse
 from util import *
 
 
