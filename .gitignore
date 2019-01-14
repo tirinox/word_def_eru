@@ -4,5 +4,5 @@ redis_docker/base
 
 config.json
 
-__pycache__/
+__pycache__
 .idea/workspace.xml

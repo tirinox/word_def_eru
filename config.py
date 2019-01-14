@@ -11,9 +11,12 @@ PROXIES = [
     None
 ]
 
-# REDIS_HOST = 'redis_word_def_instance'  # FOR LIVE SERVER
-# REDIS_HOST = 'redis' # for test2
-REDIS_HOST = 'localhost'  # for developement (local) and live
+from sys import platform
+if platform == "darwin":
+    REDIS_HOST = 'localhost'
+else:
+    REDIS_HOST = 'redis_word_def_instance'
+    # for dev use "docker_redis_1" ??
 
 REDIS_PORT = '6379'
 REDIS_DB = 0
