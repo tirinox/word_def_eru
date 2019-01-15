@@ -71,8 +71,8 @@ def add():
         return respond_error(e)
 
 
-@app.route('/useword', methods=['POST'])
-def add():
+@app.route('/use_word', methods=['POST'])
+def use_word():
     try:
         content = request.get_json(silent=True)
         word = get_word_from_request(content)
@@ -81,6 +81,22 @@ def add():
 
         return respond_json({
             'result': 'ok'
+        })
+    except Exception as e:
+        return respond_error(e)
+
+
+@app.route('/get_word_usage', methods=['POST'])
+def get_word_usage():
+    try:
+        content = request.get_json(silent=True)
+        word = get_word_from_request(content)
+
+        rate = WordUsage(redis_db).get_word_usage(word)
+
+        return respond_json({
+            'result': 'ok',
+            'rate': rate
         })
     except Exception as e:
         return respond_error(e)
