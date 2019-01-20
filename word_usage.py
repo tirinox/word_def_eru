@@ -1,34 +1,42 @@
 from util import *
+import math
 
 
 class WordUsage:
     def __init__(self, r: Redis):
         self.r = r
 
-    ESTIMATE_WORD_NUMBER = 150000
-    KEY_TOTAL_WORD_USAGE = 'total_word_usage'
+    KEY_MAX_WORD_USAGE = 'max_word_usage'
 
     @staticmethod
     def word_usage_key(word):
         return 'wus_' + word_hash(word)
 
+    def get_max_usage(self):
+        return int_or_default(self.r.get(self.KEY_MAX_WORD_USAGE), 1)
+
     def increment_word_usage(self, word):
-        self.r.incr(self.word_usage_key(word))
-        self.r.incr(self.KEY_TOTAL_WORD_USAGE)
+        key = self.word_usage_key(word)
 
-    def get_word_usage(self, word):
+        self.r.incr(key)
+
+        cur_wu = int_or_default(self.r.get(key))
+        max_wu = max(self.get_max_usage(), cur_wu)
+        self.r.set(self.KEY_MAX_WORD_USAGE, max_wu)
+
+    def get_word_usage_count(self, word):
         this_word_usage = self.r.get(self.word_usage_key(word))
-        this_word_usage = int_or_zero_if_none(this_word_usage)
+        this_word_usage = int_or_default(this_word_usage)
+        return this_word_usage
 
-        total_word_usage = self.r.get(self.KEY_TOTAL_WORD_USAGE)
-        total_word_usage = int_or_zero_if_none(total_word_usage)
-        if total_word_usage == 0:
-            total_word_usage = 1
+    def get_word_usage_rate(self, word):
+        this_word_usage = self.r.get(self.word_usage_key(word))
+        this_word_usage = int_or_default(this_word_usage)
 
-        rate = self.ESTIMATE_WORD_NUMBER * this_word_usage / total_word_usage * 100
-        if rate < 0:
-            rate = 0
-        elif rate > 100:
-            rate = 100
+        rate = this_word_usage / self.get_max_usage()
+        if rate < 0.0:
+            rate = 0.0
+        elif rate > 1.0:
+            rate = 1.0
 
-        return rate
+        return rate * 100.0

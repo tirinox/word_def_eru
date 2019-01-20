@@ -15,8 +15,8 @@ def word_hash(word):
     return hashlib.sha1(word.encode('utf-8')).hexdigest()
 
 
-def int_or_zero_if_none(v):
-    return int(v) if v is not None else 0
+def int_or_default(v, default=0):
+    return int(v) if v is not None else default
 
 
 def read_all_words_from_dictionary(dictionary_filename, max_num=None):

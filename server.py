@@ -29,7 +29,7 @@ def respond_error(e):
 
 
 def get_word_from_request(content):
-    word = content['word']
+    word = content if type(content) is str else content['word']
     word_len = len(word)
     if not isinstance(word, str) or word_len < 2 or word_len > 30:
         raise Exception('invalid word')
@@ -38,14 +38,19 @@ def get_word_from_request(content):
     return word
 
 
+@app.route('/')
+def welcome():
+    return 'Welcome to word_def!'
+
+
 @app.route('/<string:word>')
 def index(word):
     try:
-        word = word.upper()
+        word = get_word_from_request(word)
         return respond_json({
             'word': word,
             'defs': WordDefs(redis_db).get_word_def_dic_from_redis(word),
-            'usage': WordUsage(redis_db).get_word_usage(word)
+            'usage': WordUsage(redis_db).get_word_usage_count(word)
         })
     except Exception as e:
         return respond_error(e)
@@ -71,31 +76,35 @@ def add():
         return respond_error(e)
 
 
-@app.route('/use_word', methods=['POST'])
-def use_word():
+@app.route('/use/<string:word>')
+def use_word(word):
     try:
-        content = request.get_json(silent=True)
-        word = get_word_from_request(content)
+        word = get_word_from_request(word)
 
-        WordUsage(redis_db).increment_word_usage(word)
+        wu = WordUsage(redis_db)
+        wu.increment_word_usage(word)
 
         return respond_json({
-            'result': 'ok'
+            'result': 'ok',
+            'usage': wu.get_word_usage_count(word),
+            'rate': wu.get_word_usage_rate(word)
         })
     except Exception as e:
         return respond_error(e)
 
 
-@app.route('/get_word_usage', methods=['POST'])
-def get_word_usage():
+@app.route('/usage/<string:word>')
+def get_word_usage(word):
     try:
-        content = request.get_json(silent=True)
-        word = get_word_from_request(content)
+        word = get_word_from_request(word)
 
-        rate = WordUsage(redis_db).get_word_usage(word)
+        wu = WordUsage(redis_db)
+        rate = wu.get_word_usage_rate(word)
+        usage_n = wu.get_word_usage_count(word)
 
         return respond_json({
             'result': 'ok',
+            'usage': usage_n,
             'rate': rate
         })
     except Exception as e:
