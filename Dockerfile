@@ -1,14 +1,9 @@
-FROM ubuntu:16.04
-
-RUN apt-get update -y && \
-    apt-get install -y python3-pip python3-dev
+FROM jfloff/alpine-python:3.6-onbuild
 
 WORKDIR /app
 
-RUN pip3 install flask redis requests
+RUN pip install flask redis requests
 
 COPY . /app
 
-ENTRYPOINT [ "python3" ]
-
-CMD [ "server.py" ]
+CMD python server.py
