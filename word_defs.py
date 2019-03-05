@@ -2,19 +2,20 @@ from util import *
 
 
 class WordDefs:
-    def __init__(self, r: Redis):
+    def __init__(self, r: Redis, word: str):
         self.r = r
+        self.word = word
+        self._hash = word_hash(word)
 
-    @staticmethod
-    def word_def_key(word):
-        return 'word_def_' + word_hash(word)
+    def word_def_key(self):
+        return 'word_def_' + self._hash
 
-    def _save_to_redis(self, word, defs):
-        key = self.word_def_key(word)
+    def _save_to_redis(self, defs):
+        key = self.word_def_key()
         def_json = json.dumps(defs, ensure_ascii=False)
         self.r.set(key, def_json)
 
-    MAX_DEF_LEN = 320
+    MAX_DEF_LEN = 512
 
     @staticmethod
     def _find_definition(current_defs, def_text):
@@ -25,12 +26,12 @@ class WordDefs:
                     return True
         return False
 
-    def get_word_def_dic_from_redis(self, word):
-        text = self.r.get(self.word_def_key(word))
+    def get_word_def_dic_from_redis(self):
+        text = self.r.get(self.word_def_key())
         return json.loads(text) if text is not None else []
 
-    def append_word_defs(self, word, defs):
-        current_defs = self.get_word_def_dic_from_redis(word)
+    def append_word_defs(self, defs):
+        current_defs = self.get_word_def_dic_from_redis()
 
         updated = False
         for new_definition in defs:
@@ -45,11 +46,11 @@ class WordDefs:
                     updated = True
 
         if updated:
-            self._save_to_redis(word, current_defs)
+            self._save_to_redis(current_defs)
         return updated
 
-    def is_there_definition(self, word, count_empty=True):
-        entry = self.r.get(self.word_def_key(word))
+    def is_there_definition(self, count_empty=True):
+        entry = self.r.get(self.word_def_key())
         if entry is None:
             return False
         if not count_empty and entry == "[]":

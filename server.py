@@ -38,19 +38,36 @@ def get_word_from_request(content):
     return word
 
 
+def format_usage(usage: WordUsage):
+    profile_id, score = usage.get_best_profile_id_and_score()
+    count = usage.get_word_usage_count()
+    return {
+        'word': usage.word,
+        'usage': count,
+        'rate': usage.get_word_usage_rate(count),
+        'best': {
+            'profile_id': profile_id,
+            'score': score
+        }
+    }
+
+
 @app.route('/')
 def welcome():
     return 'Welcome to word_def!'
 
 
-@app.route('/<string:word>')
+@app.route('/defs/<string:word>')
 def index(word):
     try:
         word = get_word_from_request(word)
+
+        defs = WordDefs(redis_db, word)
+        usage = WordUsage(redis_db, word)
+
         return respond_json({
-            'word': word,
-            'defs': WordDefs(redis_db).get_word_def_dic_from_redis(word),
-            'usage': WordUsage(redis_db).get_word_usage_count(word)
+            **format_usage(usage),
+            'defs': defs.get_word_def_dic_from_redis(),
         })
     except Exception as e:
         return respond_error(e)
@@ -66,11 +83,30 @@ def add():
         if not isinstance(defs, list) or len(defs) < 1 or len(defs) > 10:
             raise Exception('invalid defs')
 
-        result = WordDefs(redis_db).append_word_defs(word, defs)
+        result = WordDefs(redis_db, word).append_word_defs(defs)
 
         return respond_json({
             'result': 'ok',
             'was_definition_added': result
+        })
+    except Exception as e:
+        return respond_error(e)
+
+
+@app.route('/use/<string:word>/by/<int:profile_id>/score/<int:score>')
+def use_word_ext(word, profile_id, score):
+    try:
+        word = get_word_from_request(word)
+        profile_id = int(profile_id)
+        score = int(score)
+
+        wu = WordUsage(redis_db, word)
+        wu.increment_word_usage()
+        wu.update_max_score(profile_id, score)
+
+        return respond_json({
+            'result': 'ok',
+            **format_usage(wu)
         })
     except Exception as e:
         return respond_error(e)
@@ -81,13 +117,12 @@ def use_word(word):
     try:
         word = get_word_from_request(word)
 
-        wu = WordUsage(redis_db)
-        wu.increment_word_usage(word)
+        wu = WordUsage(redis_db, word)
+        wu.increment_word_usage()
 
         return respond_json({
             'result': 'ok',
-            'usage': wu.get_word_usage_count(word),
-            'rate': wu.get_word_usage_rate(word)
+            **format_usage(wu)
         })
     except Exception as e:
         return respond_error(e)
@@ -97,19 +132,21 @@ def use_word(word):
 def get_word_usage(word):
     try:
         word = get_word_from_request(word)
-
-        wu = WordUsage(redis_db)
-        rate = wu.get_word_usage_rate(word)
-        usage_n = wu.get_word_usage_count(word)
+        wu = WordUsage(redis_db, word)
 
         return respond_json({
             'result': 'ok',
-            'usage': usage_n,
-            'rate': rate
+            **format_usage(wu)
         })
     except Exception as e:
         return respond_error(e)
 
 
 if __name__ == '__main__':
+
+    # wu = WordUsage(redis_db, 'пиво')
+    # for n in range(0, wu.get_max_usage() + 1):
+    #     print(n, '\t', wu.get_word_usage_rate(n))
+    # exit()
+
     app.run(debug=DEBUG, port=PORT, host='0.0.0.0')
