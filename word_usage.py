@@ -5,7 +5,7 @@ from redis import Redis
 
 class WordUsage:
     def __init__(self, r: Redis, word: str):
-        self.r = r
+        self.r = r  # type Redis
         self.word = word
         self._hash = word_hash(word)
 
@@ -15,9 +15,6 @@ class WordUsage:
 
     def word_usage_key(self):
         return 'wus_' + self._hash
-
-    def word_max_score_key(self):
-        return 'wms_' + self._hash
 
     def get_max_usage(self):
         return int_or_default(self.r.get(self.KEY_MAX_WORD_USAGE), 1)
@@ -30,11 +27,6 @@ class WordUsage:
         cur_wu = int_or_default(self.r.get(key))
         max_wu = max(self.get_max_usage(), cur_wu)
         self.r.set(self.KEY_MAX_WORD_USAGE, max_wu)
-
-    def update_max_score(self, profile_id, score):
-        old_profile_id, old_score = self.get_best_profile_id_and_score()
-        if old_score < score:
-            self.r.set(self.word_max_score_key(), '{}:{}'.format(profile_id, score))
 
     def get_word_usage_count(self):
         this_word_usage = self.r.get(self.word_usage_key())
@@ -52,6 +44,19 @@ class WordUsage:
             rate = math.pow(rate / self.UPPER_100_K, self.POW_COEFF)
 
         return rate * 100.0
+
+    # ------------------------------------
+
+    def word_max_score_key(self):
+        return 'wms_' + self._hash
+
+    def all_hashes_for_profiles(self):
+        return self.r.keys('wms_*')
+
+    def update_max_score(self, profile_id, score):
+        old_profile_id, old_score = self.get_best_profile_id_and_score()
+        if old_score < score:
+            self.r.set(self.word_max_score_key(), '{}:{}'.format(profile_id, score))
 
     def get_best_profile_id_and_score(self):
         key = self.word_max_score_key()
