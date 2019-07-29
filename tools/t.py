@@ -13,14 +13,14 @@ def main():
     redis_db = get_redis()
 
     someword = 'ПИЗОУЙ'
-    d1 = get_word_def_dic_from_redis(redis_db, someword)
+    d1 = load_defs(redis_db, someword)
     json_pp(d1)
     x = append_word_defs(redis_db, someword, [
         'Противный столоездП! '
     ])
     print('Success?', x)
 
-    d2 = get_word_def_dic_from_redis(redis_db, someword)
+    d2 = load_defs(redis_db, someword)
     json_pp(d2)
 
 

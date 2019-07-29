@@ -26,12 +26,12 @@ class WordDefs:
                     return True
         return False
 
-    def get_word_def_dic_from_redis(self):
+    def load_defs(self):
         text = self.r.get(self.word_def_key())
         return json.loads(text) if text is not None else []
 
     def append_word_defs(self, defs):
-        current_defs = self.get_word_def_dic_from_redis()
+        current_defs = self.load_defs()
 
         updated = False
         for new_definition in defs:

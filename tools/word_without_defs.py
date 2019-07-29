@@ -1,6 +1,7 @@
 from util import *
 import codecs
 
+
 def find_orphans(redis):
     words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
 
@@ -9,7 +10,7 @@ def find_orphans(redis):
     i = 1
     n = len(words)
     for word in words:
-        value = get_word_def_dic_from_redis(redis, word)
+        value = load_defs(redis, word)
         if value is None or value == []:
             orphans.append(word)
             print("[{}/{}] {}".format(i, n, word))
@@ -27,6 +28,6 @@ def find_orphans(redis):
 
 redis = get_redis()
 
-# print(get_word_def_dic_from_redis(redis, 'ПИВО'))
+# print(load_defs(redis, 'ПИВО'))
 
 find_orphans(redis)

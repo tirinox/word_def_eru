@@ -67,7 +67,7 @@ def index(word):
 
         return respond_json({
             **format_usage(usage),
-            'defs': defs.get_word_def_dic_from_redis(),
+            'defs': defs.load_defs(),
         })
     except Exception as e:
         return respond_error(e)
