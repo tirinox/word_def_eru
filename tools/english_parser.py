@@ -2,7 +2,6 @@ from util import *
 from word_defs import WordDefs
 import os
 from functools import reduce
-import time
 
 
 ENGLISH_ROOT = '../data/eng/'
@@ -50,40 +49,58 @@ def filter_empty(lines):
 def get_word_from_def(d: str):
     r = d.strip('"').split(' (')
     if r:
-        word = r[0].upper().replace('-', '').replace('"', '').replace('\'', '')
-        l = len(word)
-        if l >= 2 and l <= 15:
+        word = r[0].upper()
+        word = word.replace('-', '').replace('"', '').replace('\'', '')
+
+        if 2 <= len(word) <= 15:
             if not any(str.isdigit(x) for x in word):
                 if '\\' not in word and '/' not in word:
                     return word
 
 
 def all_sources():
-    n = 0
-    s = set()
     for def_file in all_dic_lists():
         defs = filter_empty(load_lines(def_file))
-
-        print('-' * 100)
-
         for word_def in defs:
             word = get_word_from_def(word_def)
-            if not word:
-                print(word_def)
-            else:
-                print('->', word.upper())
-                s.add(word)
-    print(len(s))
+            if word:
+                yield word, word_def
+
+
+def group_defs_for_word(words_and_defs):
+    last_word = None
+    new_defs = []
+
+    for word, word_def in words_and_defs:
+        if last_word != word:
+            if new_defs:
+                yield last_word, list(new_defs)
+            new_defs = [word_def]
+            last_word = word
+        else:
+            new_defs.append(word_def)
+    if new_defs:
+        yield last_word, list(new_defs)
 
 
 def main():
-    all_sources()
+    r = get_redis()
+
+    n = 0
+    for word, word_defs in group_defs_for_word(all_sources()):
+        w = WordDefs(r, word)
+        w.append_word_defs(word_defs)
+        n += 1
+        if n % 500 == 0:
+            print(n, word)
 
 
-    # r = get_redis()
-    # wd = WordDefs(r, 'ПИВО')
-    # print(wd.load_defs())
+def test():
+    r = get_redis()
+    w = WordDefs(r, 'ABSTRUDE')
+    print(w.load_defs())
 
 
 if __name__ == '__main__':
+    test()
     main()

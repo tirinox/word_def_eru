@@ -5,8 +5,14 @@ redis-server /usr/local/etc/redis.conf
 ------------------------------------------------------------------------------------------------------------------------
 
 2. Copy Redis DB from Hetzner to local db dir (macbook air)
+(not docker)
 
 scp hetzner:/var/lib/redis/dump.rdb /usr/local/var/db/redis
+
+for docker:
+
+1) stop redis in docker
+2) replace dump.rdb in compose_erudite/redisdata
 
 ------------------------------------------------------------------------------------------------------------------------
 
