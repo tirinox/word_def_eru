@@ -93,6 +93,7 @@ def main():
         n += 1
         if n % 500 == 0:
             print(n, word)
+    r.save()
 
 
 def test():
