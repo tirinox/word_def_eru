@@ -1,27 +1,18 @@
 from util import *
 from config import *
-from tools import academic_parse
-from fake_useragent import UserAgent
+from word_defs import WordDefs
 
-# ua = UserAgent()
-#     session = create_new_session(ua)
-#     test = academic_parse.download_word_definition('ПИЗДОХУЙ', session)
-#     json_pp(test)
+
+
 
 
 def main():
     redis_db = get_redis()
 
-    someword = 'ПИЗОУЙ'
-    d1 = load_defs(redis_db, someword)
-    json_pp(d1)
-    x = append_word_defs(redis_db, someword, [
-        'Противный столоездП! '
-    ])
-    print('Success?', x)
+    someword = 'EXCESS'
 
-    d2 = load_defs(redis_db, someword)
-    json_pp(d2)
+    wd = WordDefs(redis_db, someword)
+    print(wd.load_defs())
 
 
 if __name__ == '__main__':
