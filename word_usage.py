@@ -62,3 +62,17 @@ class WordUsage:
         key = self.word_max_score_key()
         s = self.r.get(key)
         return tuple(int(x) for x in s.split(':')) if s else (0, 0)
+
+    def to_json(self):
+        profile_id, score = self.get_best_profile_id_and_score()
+        count = self.get_word_usage_count()
+        return {
+            'result': 'ok',
+            'word': self.word,
+            'usage': count,
+            'rate': self.get_word_usage_rate(count),
+            'best': {
+                'profile_id': profile_id,
+                'score': score
+            }
+        }

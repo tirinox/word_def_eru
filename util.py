@@ -4,11 +4,29 @@ from redis import Redis
 import json
 import codecs
 import requests
+from flask import Response
 
 
 def get_redis():
     print('Connecting to Redis: {}:{}/{}'.format(REDIS_HOST, REDIS_PORT, REDIS_DB))
     return Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+
+
+def respond_json(json_data, status_code=200):
+    response = Response(
+        response=json.dumps(json_data, ensure_ascii=False),
+        status=status_code,
+        mimetype='application/json'
+    )
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
+    return response
+
+
+def respond_error(e):
+    return respond_json({
+        'result': 'error',
+        'message': str(e)
+    }, status_code=500)
 
 
 def word_hash(word):
@@ -54,3 +72,13 @@ def chunk_them(xs, n):
 
 def json_pp(json_data):
     print(json.dumps(json_data, indent=4, ensure_ascii=False))
+
+
+def get_word_from_request(content):
+    word = content if type(content) is str else content['word']
+    word_len = len(word)
+    if not isinstance(word, str) or word_len < 2 or word_len > 30:
+        raise Exception('invalid word')
+
+    word = word.upper()
+    return word
