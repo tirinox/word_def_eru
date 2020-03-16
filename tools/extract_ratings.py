@@ -1,10 +1,15 @@
-import os
+"""
+Сей скрипт из Редиса качает все рейтинги поплуярности слов (0-100) и пишет в табличку CSV
+"""
 from tqdm import tqdm
 import word_usage
 from util import *
 import csv
+from collections import Counter, defaultdict
 
 FILE_LIST_TXT = '../data/wordlist/final.txt'
+MIN_LENGTH = 3
+MAX_LENGTH = 9
 
 
 def read_words(file):
@@ -21,22 +26,71 @@ def word_rate_get(words, redis):
         yield word, int(rate)
 
 
-def write_out_csv(out_file, word_rate_stream):
+def write_out_csv(out_file, word_rate_stream, names):
     with open(out_file, 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
-        for word, rate in word_rate_stream:
-            writer.writerow((word, rate))
+        writer.writerow(names)
+        for i, entries in enumerate(word_rate_stream):
+            writer.writerow((i, *entries))
+
+
+class PermutationScanner:
+    def __init__(self, words) -> None:
+        self.all_words = set(words)
+        self.counters = {w: Counter(w) for w in tqdm(self.all_words)}
+
+        word_groups = defaultdict(set)
+        for w in self.all_words:
+            word_groups[len(w)].add(w)
+
+        self.word_groups = word_groups
+
+    def find_all_subwords(self, word):
+        word = word.upper()
+        subwords = set()
+        this_counter = Counter(word)
+        this_len = len(word)
+        for word_len, group in self.word_groups.items():
+            if word_len <= this_len:
+                for word in group:
+                    counter = self.counters[word]
+                    for k, v in counter.items():
+                        if v > this_counter.get(k, 0):
+                            break
+                    else:
+                        subwords.add(word)
+        return subwords
+
+
+def word_permutation_counts(all_words, items):
+    p = PermutationScanner(all_words)
+    for word, *rest in items:
+        all_sub_words = p.find_all_subwords(word)
+        yield (word, *rest, len(all_sub_words), *all_sub_words)
 
 
 def main():
+    # 1. read
     words = read_words(FILE_LIST_TXT)
-    redis = get_redis()
 
+    # 2. filter by length
+    words = (w.strip() for w in words)
+    words = (w for w in words if MIN_LENGTH <= len(w) <= MAX_LENGTH)
+
+    # 3. sort
+    words = sorted(words, key=lambda w: (-len(w), w))
+
+    # 4. extract ratings
+    redis = get_redis()
     rate_stream = word_rate_get(words, redis)
 
+    rate_stream = word_permutation_counts(words, rate_stream)
+
+    # 5. make a progresss bar
     rate_stream = tqdm(rate_stream, unit='word', total=len(words))  # progress bar
 
-    write_out_csv('../data/popularity.csv', rate_stream)
+    # 6. run the pipeline and save the results
+    write_out_csv('../data/popularity.csv', rate_stream, ('ID', 'Word', 'Rating', 'NSubWords'))
 
 
 main()
