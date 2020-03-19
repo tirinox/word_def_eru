@@ -8,8 +8,14 @@ import csv
 from collections import Counter, defaultdict
 
 FILE_LIST_TXT = '../data/wordlist/final.txt'
-MIN_LENGTH = 3
-MAX_LENGTH = 9
+
+OUTPUT_FILE = '../data/popularity.csv'
+
+MIN_LENGTH = 2
+MAX_LENGTH = 15
+
+WITH_PERMUTATIONS = False
+FILTER_ZERO_RATE = True
 
 
 def read_words(file):
@@ -84,13 +90,21 @@ def main():
     redis = get_redis()
     rate_stream = word_rate_get(words, redis)
 
-    rate_stream = word_permutation_counts(words, rate_stream)
+    if FILTER_ZERO_RATE:
+        rate_stream = ((w, r) for w, r in rate_stream if r > 0)
+
+    if WITH_PERMUTATIONS:
+        rate_stream = word_permutation_counts(words, rate_stream)
+        columns = ('ID', 'Word', 'Rating', 'NSubWords', 'Permutations')
+    else:
+        columns = ('ID', 'Word', 'Rating')
+
 
     # 5. make a progresss bar
     rate_stream = tqdm(rate_stream, unit='word', total=len(words))  # progress bar
 
     # 6. run the pipeline and save the results
-    write_out_csv('../data/popularity.csv', rate_stream, ('ID', 'Word', 'Rating', 'NSubWords'))
+    write_out_csv(OUTPUT_FILE, rate_stream, columns)
 
 
 main()
