@@ -4,8 +4,8 @@ from util import *
 class WordDefs:
     def __init__(self, r: Redis, word: str):
         self.r = r
-        self.word = word
-        self._hash = word_hash(word)
+        self.word = word.upper()
+        self._hash = word_hash(self.word)
 
     def word_def_key(self):
         return 'word_def_' + self._hash

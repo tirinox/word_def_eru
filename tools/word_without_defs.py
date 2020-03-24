@@ -1,16 +1,18 @@
 from util import *
+from word_defs import WordDefs
 import codecs
 
 
 def find_orphans(redis):
-    words = read_all_words_from_dictionary(WORD_LIST_TEXT_FILE)
+    words = read_all_words_from_dictionary('../data/wordlist/final.txt')
 
     orphans = []
 
     i = 1
     n = len(words)
     for word in words:
-        value = load_defs(redis, word)
+        wd = WordDefs(redis, word)
+        value = wd.load_defs()
         if value is None or value == []:
             orphans.append(word)
             print("[{}/{}] {}".format(i, n, word))
@@ -19,7 +21,7 @@ def find_orphans(redis):
 
     orphans.sort(key=len)
 
-    with codecs.open('data/orphans.txt', 'w', encoding='utf-8') as f:
+    with codecs.open('data/orphans1.txt', 'w', encoding='utf-8') as f:
         f.write("\n".join(orphans))
 
     total = len(orphans)
@@ -28,6 +30,5 @@ def find_orphans(redis):
 
 redis = get_redis()
 
-# print(load_defs(redis, 'ПИВО'))
 
 find_orphans(redis)

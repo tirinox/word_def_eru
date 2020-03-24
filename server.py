@@ -92,10 +92,5 @@ def get_word_usage(word):
         return respond_error(e)
 
 
-@app.route('/cache/get/<string:key>')
-def get_cache_key():
-    ...
-
-
 if __name__ == '__main__':
     app.run(debug=DEBUG, port=PORT, host='0.0.0.0')
