@@ -97,7 +97,7 @@ def get_word_usage(word):
 def permuts_get_words(lang, word_len, bucket):
     try:
         permuts = WordPermutations(redis_db, lang)
-        variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket))
+        variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket), batch_size=PERMUT_BATCH_SIZE)
         return respond_json(variants)
     except Exception as e:
         return respond_error(e)
