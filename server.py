@@ -5,6 +5,7 @@ from flask import Flask, request
 from util import *
 from word_defs import WordDefs
 from word_usage import WordUsage
+from word_permutation import WordPermutations
 
 redis_db = get_redis()
 
@@ -88,6 +89,16 @@ def get_word_usage(word):
         wu = WordUsage(redis_db, word)
 
         return respond_json(wu.to_json())
+    except Exception as e:
+        return respond_error(e)
+
+
+@app.route('/permuts/<string:lang>/<int:word_len>/<string:bucket>')
+def permuts_get_words(lang, word_len, bucket):
+    try:
+        permuts = WordPermutations(redis_db, lang)
+        variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket))
+        return respond_json(variants)
     except Exception as e:
         return respond_error(e)
 
