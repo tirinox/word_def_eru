@@ -1,6 +1,7 @@
 venv/
 data/out/
 data/dump.rdb
+data/redisdata/
 redis_docker/base
 
 config.json
