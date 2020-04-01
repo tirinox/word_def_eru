@@ -4,7 +4,7 @@ docker network create word_def_network
 
 docker stop redis_word_def_instance
 docker rm redis_word_def_instance
-docker run -p 6379:6379 -d -v "./data/redisdata:/data" --name redis_word_def_instance --net=word_def_network --restart="always" redis:4
+docker run -p 6379:6379 -d -v "data/redisdata:/data" --name redis_word_def_instance --net=word_def_network --restart="always" redis:4
 
 docker stop word_def_instance
 docker rm word_def_instance
