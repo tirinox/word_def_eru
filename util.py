@@ -5,11 +5,22 @@ import json
 import codecs
 import requests
 from flask import Response
+from functools import wraps
 
 
 def get_redis():
     print('Connecting to Redis: {}:{}/{}'.format(REDIS_HOST, REDIS_PORT, REDIS_DB))
     return Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+
+
+def fail_safe_json_responder(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        try:
+            return respond_json(func(args, kwargs))
+        except Exception as e:
+            return respond_error(e)
+    return inner
 
 
 def respond_json(json_data, status_code=200):

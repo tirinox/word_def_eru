@@ -18,89 +18,77 @@ def welcome():
 
 
 @app.route('/defs/<string:word>')
+@fail_safe_json_responder
 def index(word):
-    try:
-        word = get_word_from_request(word)
+    word = get_word_from_request(word)
 
-        defs = WordDefs(redis_db, word)
-        usage = WordUsage(redis_db, word)
+    defs = WordDefs(redis_db, word)
+    usage = WordUsage(redis_db, word)
 
-        return respond_json({
-            **usage.to_json(),
-            'defs': defs.load_defs(),
-        })
-    except Exception as e:
-        return respond_error(e)
+    return {
+        **usage.to_json(),
+        'defs': defs.load_defs(),
+    }
 
 
 @app.route('/add', methods=['POST'])
+@fail_safe_json_responder
 def add():
-    try:
-        content = request.get_json(silent=True)
-        word = get_word_from_request(content)
+    content = request.get_json(silent=True)
+    word = get_word_from_request(content)
 
-        defs = content['defs']
-        if not isinstance(defs, list) or len(defs) < 1 or len(defs) > 10:
-            raise Exception('invalid defs')
+    defs = content['defs']
+    if not isinstance(defs, list) or len(defs) < 1 or len(defs) > 10:
+        raise Exception('invalid defs')
 
-        result = WordDefs(redis_db, word).append_word_defs(defs)
+    result = WordDefs(redis_db, word).append_word_defs(defs)
 
-        return respond_json({
-            'result': 'ok',
-            'was_definition_added': result
-        })
-    except Exception as e:
-        return respond_error(e)
+    return {
+        'result': 'ok',
+        'was_definition_added': result
+    }
 
 
 @app.route('/use/<string:word>/by/<int:profile_id>/score/<int:score>')
+@fail_safe_json_responder
 def use_word_ext(word, profile_id, score):
-    try:
-        word = get_word_from_request(word)
-        profile_id = int(profile_id)
-        score = int(score)
+    word = get_word_from_request(word)
+    profile_id = int(profile_id)
+    score = int(score)
 
-        wu = WordUsage(redis_db, word)
-        wu.increment_word_usage()
-        wu.update_max_score(profile_id, score)
+    wu = WordUsage(redis_db, word)
+    wu.increment_word_usage()
+    wu.update_max_score(profile_id, score)
 
-        return respond_json(wu.to_json())
-    except Exception as e:
-        return respond_error(e)
+    return wu.to_json()
 
 
 @app.route('/use/<string:word>')
+@fail_safe_json_responder
 def use_word(word):
-    try:
-        word = get_word_from_request(word)
+    word = get_word_from_request(word)
 
-        wu = WordUsage(redis_db, word)
-        wu.increment_word_usage()
+    wu = WordUsage(redis_db, word)
+    wu.increment_word_usage()
 
-        return respond_json(wu.to_json())
-    except Exception as e:
-        return respond_error(e)
+    return wu.to_json()
 
 
 @app.route('/usage/<string:word>')
+@fail_safe_json_responder
 def get_word_usage(word):
-    try:
-        word = get_word_from_request(word)
-        wu = WordUsage(redis_db, word)
+    word = get_word_from_request(word)
+    wu = WordUsage(redis_db, word)
 
-        return respond_json(wu.to_json())
-    except Exception as e:
-        return respond_error(e)
+    return wu.to_json()
 
 
 @app.route('/permuts/<string:lang>/<int:word_len>/<string:bucket>')
+@fail_safe_json_responder
 def permuts_get_words(lang, word_len, bucket):
-    try:
-        permuts = WordPermutations(redis_db, lang)
-        variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket), batch_size=PERMUT_BATCH_SIZE)
-        return respond_json(variants)
-    except Exception as e:
-        return respond_error(e)
+    permuts = WordPermutations(redis_db, lang)
+    variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket), batch_size=PERMUT_BATCH_SIZE)
+    return variants
 
 
 if __name__ == '__main__':
