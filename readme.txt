@@ -31,3 +31,11 @@ config get dir
 
 ------------------------------------------------------------------------------------------------------------------------
 
+
+~~~~~~
+
+How to run purify_defs.py
+
+docker ps | grep word_def
+docker exec -it 0711 bash
+cd tools && PYTHONPATH=.. python3 purify_defs.py

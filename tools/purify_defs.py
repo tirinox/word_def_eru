@@ -113,9 +113,12 @@ def is_good_dic(d):
 
 
 def fix_dic_name(d):
-    dic = d['dic']['name'] if 'dic' in d else ''
-    if dic == '':
-        return 'internal'
+    if 'dic' not in d or not d['dic']:
+        dic = 'internal'
+    else:
+        dic = d['dic']
+        if isinstance(dic, dict):
+            dic = dic['name']
     return dic
 
 
@@ -130,10 +133,7 @@ def purify_defs(word, defs):
 
     defs = [d for d in defs if is_good_dic(d['dic'])]
 
-    return {
-        'word': word,
-        'defs': defs
-    }
+    return defs
 
 
 def is_def_invalid(v):
@@ -213,28 +213,41 @@ def interactive_dic_quality_env(redis: Redis, words: list, max_len=5):
 
 
 def all_defs_purify(r: Redis, words: list):
+    print('all_defs_purify')
+
+    n = 0
     for word in tqdm(words):
         wd = WordDefs(r, word)
-        defs = wd.load_defs()
+        defs = WordDefs.decode_db_value(r.get(wd.word_def_key()))
 
         if len(defs):
             wd._defs = purify_defs(word, defs)
             wd.save_to_redis()
 
+            n += 1
+
+    print(f'all_defs_purify => {n} purified')
+
 
 if __name__ == '__main__':
-    assert False, "not working!"
-
-
     redis = get_redis()
 
+    print('loading words...')
     words = read_all_words_from_dictionary('../data/wordlist/final.txt')
 
     import random
     random.shuffle(words)
 
-    # find_all_invalid_defs(redis)
+    sep()
+
+    delete_empty_defs(redis)
+
+    sep()
 
     all_defs_purify(redis, words)
 
-    # delete_empty_defs(redis)
+    sep()
+
+    print('saving redis db...')
+    redis.save()
+    print('done')
