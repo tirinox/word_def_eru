@@ -2,3 +2,4 @@ flask
 redis
 tqdm
 requests
+mysql-connector-python

@@ -31,7 +31,7 @@ def clear_text(text: str):
 def is_good_text(text):
     if 'ї' in text or 'ð' in text or 'I суффикс' in text:
         return False
-    if len(text) < 12:
+    if len(text) < 10:
         return False
     if 'В Википедии есть статьи о других людях с такой фамилией' in text:
         return False
@@ -101,7 +101,8 @@ BAD_DICTS = {
     'Сонник Мельникова ',
     'Словник лемківскої говірки',
     'Этимологический словарь русского языка Макса Фасмера',
-    'Старабеларускі лексікон'
+    'Старабеларускі лексікон',
+    'Словарь употребления буквы Ё',
 }
 
 
@@ -142,7 +143,7 @@ def is_def_invalid(v):
     for d in v['defs']:
         if 'dic' in d and not isinstance(d['dic'], str):
             return True
-        if 'text' not in d or not isinstance(d['text'], str) or len(d['text']) < 12:
+        if 'text' not in d or not isinstance(d['text'], str) or len(d['text']) < 10:
             return True
 
     return False
@@ -155,7 +156,7 @@ def delete_empty_defs(r: Redis):
     n = 0
     print('Removing bad keys...')
     for key in tqdm(keys):
-        j = WordDefs.decode_db_value(r.get(key), enum_them=False)
+        j = WordDefs.decode_db_value(r.get(key))
         if not j:
             r.delete(key)
             n += 1
@@ -172,7 +173,7 @@ def find_all_invalid_defs(r: Redis):
     print('Processing...')
     badkeys = {}
     for key in tqdm(keys):
-        j = WordDefs.decode_db_value(r.get(key), enum_them=False)
+        j = WordDefs.decode_db_value(r.get(key))
         if is_def_invalid(j):
             badkeys[key] = j
             if len(badkeys) % 100 == 0:
@@ -201,8 +202,6 @@ def interactive_dic_quality_env(redis: Redis, words: list, max_len=5):
                 continue
 
             defs = purify_defs(word, defs)
-            # for d in defs['defs']:
-            #     dicts[d['dic']] += 1
 
             for d in defs['defs']:
                 print(f'{d["dic"]!r} : {d["text"]}\n')
@@ -219,11 +218,14 @@ def all_defs_purify(r: Redis, words: list):
         defs = wd.load_defs()
 
         if len(defs):
-            defs = purify_defs(word, defs)
-            wd.save_to_redis(defs)
+            wd._defs = purify_defs(word, defs)
+            wd.save_to_redis()
 
 
 if __name__ == '__main__':
+    assert False, "not working!"
+
+
     redis = get_redis()
 
     words = read_all_words_from_dictionary('../data/wordlist/final.txt')

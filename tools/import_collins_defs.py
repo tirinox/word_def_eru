@@ -22,7 +22,9 @@ def main():
         word, definition = str(line).split('\t')
 
         wd = WordDefs(redis_db, word)
-        wd.append_word_defs([definition])
+        wd.append_word_defs([{
+            'text': definition
+        }])
 
     redis_db.save()
 

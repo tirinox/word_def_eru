@@ -17,7 +17,7 @@ def fail_safe_json_responder(func):
     @wraps(func)
     def inner(*args, **kwargs):
         try:
-            return respond_json(func(args, kwargs))
+            return respond_json(func(*args, **kwargs))
         except Exception as e:
             return respond_error(e)
     return inner
@@ -93,3 +93,30 @@ def get_word_from_request(content):
 
     word = word.upper()
     return word
+
+
+def move_element_in_list(l: list, ident, direction):
+    n = len(l)
+    if ident < 0 or ident >= n:
+        raise IndexError
+
+    el = l.pop(ident)
+    n -= 1
+
+    if direction == 'up':
+        ins_pt = max(0, ident - 1)
+    elif direction == 'down':
+        ins_pt = min(n, ident + 1)
+    elif direction == 'top':
+        ins_pt = 0
+    elif direction == 'bottom':
+        ins_pt = n
+    else:
+        raise ValueError('direction must be either [up, down, top, bottom]')
+
+    l.insert(ins_pt, el)
+
+    return l
+
+def sep():
+    print('-' * 100)

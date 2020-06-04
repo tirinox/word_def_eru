@@ -89,6 +89,9 @@ def main():
     n = 0
     for word, word_defs in group_defs_for_word(all_sources()):
         w = WordDefs(r, word)
+
+        word_defs = [{'text': t} for t in word_defs]
+
         w.append_word_defs(word_defs)
         n += 1
         if n % 500 == 0:

@@ -3,11 +3,19 @@ from util import *
 
 class WordDefs:
     KEY_PREFIX = 'word_def_'
+    MAX_DEF_LEN = 512
+    MAX_DIC_NAME_LEN = 256
+    MAX_URL_LEN = 1024
 
     def __init__(self, r: Redis, word: str):
         self.r = r
         self.word = word.strip().upper()
         self._hash = word_hash(self.word)
+        self._defs = []
+
+    def delete(self):
+        self._defs = []
+        self.r.delete(self.word_def_key())
 
     @staticmethod
     def all_keys(r: Redis):
@@ -16,68 +24,110 @@ class WordDefs:
     def word_def_key(self):
         return self.KEY_PREFIX + self._hash
 
-    def save_to_redis(self, defs):
+    def save_to_redis(self):
         key = self.word_def_key()
-        def_json = json.dumps(defs, ensure_ascii=False)
+        def_json = json.dumps({
+            'word': self.word,
+            'defs': self._defs
+        }, ensure_ascii=False)
         self.r.set(key, def_json)
 
-    MAX_DEF_LEN = 512
-
-    @staticmethod
-    def _find_definition(current_defs, def_text):
-        for current_def in current_defs:
+    def _find_definition(self, needle_text):
+        for current_def in self._defs:
             if 'text' in current_def:
                 current_def_text = current_def['text']
-                if current_def_text == def_text:
+                if current_def_text == needle_text:
                     return True
         return False
 
-    EMPTY_DEF = {
-            'word': '?',
-            'defs': []
-        }
-
     @staticmethod
-    def decode_db_value(v, enum_them=True):
-        r = json.loads(v) if v is not None else WordDefs.EMPTY_DEF
+    def decode_db_value(v):
+        r = json.loads(v) if v is not None else {}
+        return r
+
+    def get_defs(self, enum_them=True):
+        defs = list(self._defs)
         if enum_them:
-            r['defs'] = [
+            defs = [
                 {
                     **d,
                     'id': i
-                } for i, d in enumerate(r['defs'])
+                } for i, d in enumerate(defs)
             ]
-        return r
+        return defs
+
+    def _check_ident(self, ident):
+        self.load_defs()
+        ident = int(ident)
+        if ident < 0 or ident >= len(self._defs):
+            raise Exception('ident out of range')
+        return ident
 
     def remove_def(self, ident):
-        defs = self.load_defs()
+        ident = self._check_ident(ident)
+        del self._defs[ident]
+        self.save_to_redis()
 
+    def move_def(self, ident, direction):
+        ident = self._check_ident(ident)
+        items = self._defs
+        move_element_in_list(items, ident, direction)
+        self.save_to_redis()
 
-    def load_defs(self):
-        text = self.r.get(self.word_def_key())
-        return self.decode_db_value(text)
+    def load_defs(self, forced=False):
+        if forced or not self._defs:
+            text = self.r.get(self.word_def_key())
+            r = self.decode_db_value(text)
+            self._defs = r.get('defs', [])
+            self.word = r.get('word', self.word)
+        return self._defs
 
-    def append_word_defs(self, defs):
+    def _clean_def(self, new_definition):
+        text = str(new_definition['text']).strip()
+        image_url = str(new_definition.get('imageURL', ''))
+        dic = str(new_definition.get('dic', 'internal'))
+
+        assert len(dic) < self.MAX_DIC_NAME_LEN
+        assert len(image_url) < self.MAX_URL_LEN
+        assert isinstance(text, str) and len(text) >= 10
+
+        new_def = {'text': text}
+        if image_url:
+            new_def['imageURL'] = image_url
+        if dic:
+            new_def['dic'] = dic
+        return new_def
+
+    def update_def(self, ident, new_def):
+        ident = self._check_ident(ident)
+        new_def = self._clean_def(new_def)
+        self._defs[ident] = new_def
+        self.save_to_redis()
+
+    def append_word_defs(self, new_defs):
         """
-        :param defs: list of str
+        :param new_defs: list of [{'text': ...., 'imageURL': ???, 'dic': ???}]
         :return: WordDef updated
         """
-        current_defs = self.load_defs()
+        cur_def_list = self.load_defs()
+
+        if not isinstance(new_defs, (list, tuple)):
+            new_defs = [new_defs]
+
+        prepend_list = []
 
         updated = False
-        for new_definition in defs:
-            if isinstance(new_definition, str) and len(new_definition) >= 3:
-                new_definition = new_definition.strip()
-                new_definition = new_definition[:self.MAX_DEF_LEN]
+        for new_definition in new_defs:
+            new_definition = self._clean_def(new_definition)
+            text = new_definition['text']
 
-                if not self._find_definition(current_defs, new_definition):
-                    current_defs.append({
-                        'text': new_definition
-                    })
-                    updated = True
+            if not self._find_definition(text):
+                prepend_list.append(new_definition)
+                updated = True
 
         if updated:
-            self.save_to_redis(current_defs)
+            self._defs = prepend_list + self._defs
+            self.save_to_redis()
         return updated
 
     def is_there_definition(self, count_empty=True):
