@@ -17,7 +17,9 @@ def fail_safe_json_responder(func):
     @wraps(func)
     def inner(*args, **kwargs):
         try:
-            return respond_json(func(*args, **kwargs))
+            j = func(*args, **kwargs)
+            j['result'] = 'ok'
+            return respond_json(j)
         except Exception as e:
             return respond_error(e)
     return inner
@@ -117,6 +119,7 @@ def move_element_in_list(l: list, ident, direction):
     l.insert(ins_pt, el)
 
     return l
+
 
 def sep():
     print('-' * 100)

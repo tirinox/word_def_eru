@@ -46,7 +46,6 @@ def add():
     result = WordDefs(redis_db, word).append_word_defs(defs)
 
     return {
-        'result': 'ok',
         'was_definition_added': result
     }
 
@@ -57,7 +56,7 @@ def def_move(word, ident, direction):
     word = get_word_from_request(word)
     wd = WordDefs(redis_db, word)
     wd.move_def(ident, direction)
-    return wd.get_defs()
+    return {'defs': wd.get_defs()}
 
 
 @app.route('/def/<string:word>/remove/<int:ident>')
@@ -66,17 +65,16 @@ def def_remove(word, ident):
     word = get_word_from_request(word)
     wd = WordDefs(redis_db, word)
     wd.remove_def(ident)
-    return wd.get_defs()
+    return {'defs': wd.get_defs()}
 
 
 @app.route('/def/<string:word>/edit/<int:ident>', methods=['POST'])
 @fail_safe_json_responder
 def def_edit(word, ident):
     content = request.get_json(silent=True)
-    word = get_word_from_request(content)
     wd = WordDefs(redis_db, word)
     wd.update_def(ident, content['def'])
-    return wd.get_defs()
+    return {'defs': wd.get_defs()}
 
 
 # ------------------------------- USE ----------------------------------
@@ -124,7 +122,7 @@ def get_word_usage(word):
 def permuts_get_words(lang, word_len, bucket):
     permuts = WordPermutations(redis_db, lang)
     variants = permuts.subsample(permuts.get_all_from_bucket(word_len, bucket), batch_size=PERMUT_BATCH_SIZE)
-    return variants
+    return {'permuts': variants}
 
 
 if __name__ == '__main__':

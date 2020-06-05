@@ -67,7 +67,6 @@ class WordUsage:
         profile_id, score = self.get_best_profile_id_and_score()
         count = self.get_word_usage_count()
         return {
-            'result': 'ok',
             'word': self.word,
             'usage': count,
             'rate': self.get_word_usage_rate(count),
