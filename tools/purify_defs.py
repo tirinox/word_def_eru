@@ -21,10 +21,14 @@ from util import *
 from tqdm import tqdm
 from word_defs import WordDefs
 from collections import Counter
+from fuzzywuzzy.process import dedupe
+
+import unicodedata
 
 
 def clear_text(text: str):
     text = text.replace('… …', '…')
+    text = normalize_text(text)
     return text
 
 
@@ -37,6 +41,8 @@ def is_good_text(text):
         return False
     return True
 
+
+DEDUPE_THRESHOLD = 100
 
 BAD_DICTS = {
     'Орфографічний словник української мови',
@@ -122,9 +128,43 @@ def fix_dic_name(d):
     return dic
 
 
+def dedupe_defs(defs):
+    only_texts = [d['text'] for d in defs]
+
+    if DEDUPE_THRESHOLD == 100:
+        deduped_texts = set(only_texts)
+    else:
+        try:
+            deduped_texts = set(dedupe(only_texts, threshold=DEDUPE_THRESHOLD))
+        except IndexError:
+            print('failed to use fuzzywuzzy to dedupe defs; using strict comparison')
+            n = len(only_texts)
+            deduped_texts = set(only_texts)
+            print(f'{n} -> {len(deduped_texts)}')
+
+    out_defs = {}
+    for d in defs:
+        if d['text'] in deduped_texts and 'imageURL' in d and d['imageURL']:
+            out_defs[d['text']] = d
+
+    for d in defs:
+        if d['text'] in deduped_texts and d['text'] not in out_defs:
+            out_defs[d['text']] = d
+
+    return list(out_defs.values())
+
+
+def has_image(defs):
+    return any(1 for d in defs if 'imageURL' in d and len(d['imageURL']) >= 10)
+
+
+def normalize_text(input_text):
+    return unicodedata.normalize('NFKD', input_text)
+
+
 def purify_defs(word, defs):
-    if isinstance(defs, dict) and 'word' in defs:
-        return defs  # all set
+    while isinstance(defs, dict):
+        defs = defs['defs']
 
     defs = [{
         'text': clear_text(d['text']),
@@ -132,6 +172,21 @@ def purify_defs(word, defs):
     } for d in defs if is_good_text(d['text'])]
 
     defs = [d for d in defs if is_good_dic(d['dic'])]
+
+    n = len(defs)
+    had_image = has_image(defs)
+
+    defs = dedupe_defs(defs)
+
+    if n != len(defs):
+        print(f'deduped: {word} {n} -> {len(defs)}')
+
+    if had_image != has_image(defs):
+        sep()
+        print('ERROR: image removed:')
+        print_defs(defs)
+        sep()
+        exit(-1)
 
     return defs
 
@@ -203,7 +258,7 @@ def interactive_dic_quality_env(redis: Redis, words: list, max_len=5):
 
             defs = purify_defs(word, defs)
 
-            for d in defs['defs']:
+            for d in defs:
                 print(f'{d["dic"]!r} : {d["text"]}\n')
 
             print(f'\n >>> {word} <<<< \n')
@@ -218,10 +273,10 @@ def all_defs_purify(r: Redis, words: list):
     n = 0
     for word in tqdm(words):
         wd = WordDefs(r, word)
-        defs = WordDefs.decode_db_value(r.get(wd.word_def_key()))
+        entry = WordDefs.decode_db_value(r.get(wd.word_def_key()))
 
-        if len(defs):
-            wd._defs = purify_defs(word, defs)
+        if entry:
+            wd._defs = purify_defs(word, entry)
             wd.save_to_redis()
 
             n += 1
@@ -229,9 +284,7 @@ def all_defs_purify(r: Redis, words: list):
     print(f'all_defs_purify => {n} purified')
 
 
-if __name__ == '__main__':
-    redis = get_redis()
-
+def main(redis: Redis):
     print('loading words...')
     words = read_all_words_from_dictionary('../data/wordlist/final.txt')
 
@@ -240,7 +293,7 @@ if __name__ == '__main__':
 
     sep()
 
-    delete_empty_defs(redis)
+    # delete_empty_defs(redis)
 
     sep()
 
@@ -251,3 +304,28 @@ if __name__ == '__main__':
     print('saving redis db...')
     redis.save()
     print('done')
+
+
+def print_defs(defs):
+    print(*defs, sep='\n----\n')
+
+
+def test_dedupe(redis):
+    wd = WordDefs(redis, 'скат')
+    wd.load_defs()
+
+    wd._defs[1]['imageURL'] = 'image-url-set'
+
+    defs = wd.get_defs()
+
+    print_defs(defs)
+    sep()
+
+    clean = dedupe_defs(wd.get_defs())
+    print_defs(clean)
+
+
+if __name__ == '__main__':
+    redis = get_redis()
+
+    main(redis)

@@ -2,6 +2,7 @@ from util import *
 from config import *
 from word_defs import WordDefs
 import json
+from fuzzywuzzy import fuzz
 
 
 def test_add(redis_db):
@@ -26,8 +27,13 @@ def main():
 
     # print(test_add(redis_db))
 
+    # k = WordDefs(redis_db, 'мо').word_def_key()
+    # print(redis_db.get(k))
+    #
+    print(fuzz.token_set_ratio("люблю я спать", "люблю я спать и спать и еть"))
 
-    print(*WordDefs(redis_db, 'МО').load_defs(), sep='\n\n')
+
+    # print(*WordDefs(redis_db, 'мо').load_defs(), sep='\n\n')
 
     # wd = WordDefs(redis_db, 'эйлерс')
     # wd.append_word_defs([
