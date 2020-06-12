@@ -13,6 +13,14 @@ class WordDefs:
         self._hash = word_hash(self.word)
         self._defs = []
 
+    @classmethod
+    def has_image(cls, defs):
+        for d in defs:
+            img = d.get('imageURL', '')
+            if img and isinstance(img, str) and len(img) >= 10:
+                return True
+        return False
+
     def delete(self):
         self._defs = []
         self.r.delete(self.word_def_key())
@@ -109,7 +117,9 @@ class WordDefs:
         :param new_defs: list of [{'text': ...., 'imageURL': ???, 'dic': ???}]
         :return: WordDef updated
         """
-        cur_def_list = self.load_defs()
+        self.load_defs()
+
+        not_image_yet = not self.has_image(self._defs)
 
         if not isinstance(new_defs, (list, tuple)):
             new_defs = [new_defs]
@@ -121,7 +131,11 @@ class WordDefs:
             new_definition = self._clean_def(new_definition)
             text = new_definition['text']
 
-            if not self._find_definition(text):
+            if not_image_yet and self.has_image([new_definition]):
+                prepend_list.append(new_definition)
+                updated = True
+                not_image_yet = False
+            elif not self._find_definition(text):
                 prepend_list.append(new_definition)
                 updated = True
 
