@@ -86,6 +86,11 @@ def an_empty_word_def():
     wd.delete()
 
 
+@pytest.fixture()
+def redis_db():
+    return get_redis()
+
+
 def test_add_defs(an_empty_word_def: WordDefs):
     wd = an_empty_word_def
     wd.append_word_defs([
@@ -107,3 +112,12 @@ def test_add_defs(an_empty_word_def: WordDefs):
     assert len(defs) == 2
     assert defs[0]['text'] == 'магазинчик еды ололо'
     assert defs[1]['text'] == 'принцип кино - больше сцен'
+
+
+def test_ve(redis_db):
+    wd = WordDefs(redis_db, 'ВЕ')
+    wd.append_word_defs([
+        {
+            'text': 'efflj weflej lwefj jwelfjwe flewjf wlfjwelj fweflw fjlwe'
+        }
+    ])

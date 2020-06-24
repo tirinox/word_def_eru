@@ -86,8 +86,13 @@ class WordDefs:
         if forced or not self._defs:
             text = self.r.get(self.word_def_key())
             r = self.decode_db_value(text)
-            self._defs = r.get('defs', [])
-            self.word = r.get('word', self.word)
+
+            if isinstance(r, dict):
+                self._defs = r.get('defs', [])
+                self.word = r.get('word', self.word)
+            elif isinstance(r, list):
+                self._defs = r
+
         return self._defs
 
     def _clean_def(self, new_definition):
