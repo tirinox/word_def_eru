@@ -6,7 +6,7 @@ from tqdm import tqdm
 from util import *
 import os
 from word_defs import WordDefs
-from tools.upload_redis2mysql import get_mysql_connect, distinct_cross_words
+# from tools.upload_redis2mysql import get_mysql_connect, distinct_cross_words
 from tools.download_images import cross_used_words, download_image, IMG_SAVE_PATH
 from tools.upload_def_images_to_erugame import upload_image, is_erugame_image_url
 
@@ -28,13 +28,13 @@ def run_pipeline(source, total=None):
                 print(f'Upload error: {new_remote_url} for wrd {wd.word}')
 
 
-def all_crossword_words(directly_from_mysql=True):
-    if directly_from_mysql:
-        mysql = get_mysql_connect()
-        words = distinct_cross_words(mysql)
-        return words
-    else:
-        return cross_used_words()
+# def all_crossword_words(directly_from_mysql=True):
+#     if directly_from_mysql:
+#         mysql = get_mysql_connect()
+#         words = distinct_cross_words(mysql)
+#         return words
+#     else:
+#         return cross_used_words()
 
 
 def word_defs_from_keys(keys, redis):
