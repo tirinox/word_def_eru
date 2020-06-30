@@ -42,7 +42,7 @@ def download_image(img_url, name, cached=True):
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, f)
     else:
-        print(f'warning: file {img_url} ({word}) returned code {r.status_code}')
+        print(f'warning: file {img_url} ({name}) returned code {r.status_code}')
 
     return path
 
