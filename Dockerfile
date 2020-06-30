@@ -6,6 +6,7 @@ RUN apk add  --update --no-cache build-base py3-configobj py3-pip py3-setuptools
                        # Pillow dependencies
                        jpeg-dev \
                        zlib-dev \
+                       libwebp-dev \
                        freetype-dev \
                        lcms2-dev \
                        openjpeg-dev \
