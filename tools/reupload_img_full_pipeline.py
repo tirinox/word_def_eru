@@ -20,16 +20,20 @@ def run_pipeline(source, total=None):
 
             local_image = download_image(img_url, wd.word, cached=False)
 
+            if local_image is None:
+                print(f'Download error: {img_url} for word {wd.word}')
+                continue
+
+            new_remote_url = upload_image(local_image)
+
             if local_image.startswith('http'):
-                new_remote_url = upload_image(local_image)
-            else:
                 new_remote_url = local_image
 
             if is_erugame_image_url(new_remote_url):
                 wd.update_image_url(new_remote_url)
                 wd.save_to_redis()
             else:
-                print(f'Upload error: {new_remote_url} for wrd {wd.word}')
+                print(f'Upload error: {new_remote_url} for word {wd.word}')
 
 
 # def all_crossword_words(directly_from_mysql=True):
