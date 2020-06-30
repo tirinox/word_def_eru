@@ -18,6 +18,7 @@ def run_pipeline(source, total=None):
             if is_erugame_image_url(img_url):
                 continue
 
+            print(f'Downloading: {img_url} for word {wd.word}')
             local_image = download_image(img_url, wd.word, cached=False)
 
             if local_image is None:

@@ -36,13 +36,18 @@ def download_image(img_url, name, cached=True):
     if cached and os.path.exists(path):
         return path
 
-    r = requests.get(img_url, stream=True, allow_redirects=True, verify=False, headers=headers)
+    try:
+        r = requests.get(img_url, stream=True, allow_redirects=True, verify=False, headers=headers, timeout=10)
+    except requests.exceptions.Timeout:
+        print('\n\nTimeout!\n\n')
+        return None
+
     if r.status_code == 200:
         with open(path, 'wb') as f:
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, f)
     else:
-        print(f'warning: file {img_url} ({name}) returned code {r.status_code}')
+        print(f'\nError: file {img_url} ({name}) returned code {r.status_code}\n\n')
         return None
 
     return path
