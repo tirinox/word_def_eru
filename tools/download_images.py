@@ -27,7 +27,7 @@ def get_image_path(img_url, name):
     return path
 
 
-def download_image(img_url, name, cached=True):
+def download_image(img_url, name, cached=True, verify=True):
     headers = {
         'User-Agent': ua.random,
     }
@@ -37,10 +37,12 @@ def download_image(img_url, name, cached=True):
         return path
 
     try:
-        r = requests.get(img_url, stream=True, allow_redirects=True, headers=headers, timeout=10)
+        r = requests.get(img_url, stream=True, allow_redirects=True, headers=headers, timeout=10, verify=verify)
     except requests.exceptions.Timeout:
         print('\n\nTimeout!\n\n')
         return None
+    except requests.exceptions.SSLError:
+        return download_image(img_url, name, cached, verify=False)
 
     if r.status_code == 200:
         with open(path, 'wb') as f:

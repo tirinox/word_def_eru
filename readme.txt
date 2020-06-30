@@ -41,4 +41,5 @@ docker exec -it 0711 /bin/sh
 cd tools && PYTHONPATH=.. python3 purify_defs.py
 
 
-cd tools && PYTHONPATH=.. python3 reupload_img_full_pipeline.py
+cd tools
+PYTHONPATH=.. python3 reupload_img_full_pipeline.py
