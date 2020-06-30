@@ -18,11 +18,14 @@ def run_pipeline(source, total=None):
             if is_erugame_image_url(img_url):
                 continue
 
-            local_image = download_image(img_url, wd.word)
+            local_image = download_image(img_url, wd.word, cached=False)
             new_remote_url = upload_image(local_image)
 
-            wd.update_image_url(new_remote_url)
-            wd.save_to_redis()
+            if is_erugame_image_url(new_remote_url):
+                wd.update_image_url(new_remote_url)
+                wd.save_to_redis()
+            else:
+                print(f'Upload error: {new_remote_url} for wrd {wd.word}')
 
 
 def all_crossword_words(directly_from_mysql=True):
@@ -51,7 +54,7 @@ def word_defs_from_list(redis, word_list):
 
 if __name__ == '__main__':
     redis = get_redis()
-    
+
     os.makedirs(IMG_SAVE_PATH, exist_ok=True)
 
     all_word_keys = WordDefs.all_keys(redis)
