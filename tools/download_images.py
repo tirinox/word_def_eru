@@ -37,7 +37,7 @@ def download_image(img_url, name, cached=True):
         return path
 
     try:
-        r = requests.get(img_url, stream=True, allow_redirects=True, verify=False, headers=headers, timeout=10)
+        r = requests.get(img_url, stream=True, allow_redirects=True, headers=headers, timeout=10)
     except requests.exceptions.Timeout:
         print('\n\nTimeout!\n\n')
         return None
