@@ -7,13 +7,19 @@ from tqdm import tqdm
 from util import *
 from word_defs import WordDefs
 
-if __name__ == '__main__':
-    redis = get_redis()
 
+def cross_used_words():
     with open('../data/cross_used_words_1.txt', 'r') as f:
         words = f.readlines()
 
     words = list(map(str.strip, words))
+    return words
+
+
+if __name__ == '__main__':
+    redis = get_redis()
+
+    words = cross_used_words()
 
     all_j = {}
 

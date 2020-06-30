@@ -14,6 +14,22 @@ class WordDefs:
         self._defs = []
 
     @classmethod
+    def from_key(cls, redis, key):
+        info = WordDefs.decode_db_value(redis.get(key))
+        if not isinstance(info, dict) or 'word' not in info:
+            return None
+        wd = cls(redis, info['word'])
+        wd._defs = info['defs']
+        return wd
+
+    @property
+    def image_url(self):
+        for d in self.load_defs():
+            img_url = d.get('imageURL')
+            if img_url:
+                return img_url
+
+    @classmethod
     def has_image(cls, defs):
         for d in defs:
             img = d.get('imageURL', '')
@@ -156,3 +172,12 @@ class WordDefs:
         if not count_empty and entry == "[]":
             return False
         return True
+
+    def update_image_url(self, new_image_url):
+        for d in self._defs:
+            if 'imageURL' in d:
+                if new_image_url:
+                    d['imageURL'] = new_image_url
+                else:
+                    del d['imageURL']
+                break

@@ -22,6 +22,13 @@ def n_cross_used_words(sql: MySQLConnection):
     return result
 
 
+def distinct_cross_words(sql: MySQLConnection):
+    sqlc = sql.cursor()
+    sqlc.execute("SELECT distinct word FROM CrossUsedWord")
+    results = sqlc.fetchall()
+    return [r[0] for r in results]
+
+
 def add_definition(cursor, word, text, priority, dic, image_url=None):
     cursor.execute("INSERT INTO WordDefinition "
                    "(word, definition, date, dic, imageURL) "

@@ -1,5 +1,8 @@
 """
-Скачивает картинки слов из кроссворд
+Скачивает картинки слов из кроссвордов с внешних сайтов
+из списка слов (см. cross_used_words)
+т.е. ищет в redis определения слов, достает оттуда картинку и заливает их в SAVE_PATH
+имя в формате СЛОВО.ext
 """
 
 import json
@@ -10,34 +13,28 @@ from word_defs import WordDefs
 import requests
 import shutil
 from fake_useragent import UserAgent
+from tools.redis_defs_to_json import cross_used_words
+
 ua = UserAgent()
 
-SAVE_PATH = '../data/img/'
-
-
-def get_image_url(wd: WordDefs):
-    defs = wd.load_defs()
-    for d in defs:
-        img_url = d.get('imageURL')
-        if img_url:
-            return img_url
+IMG_SAVE_PATH = '../data/img/'
 
 
 def get_image_path(img_url, name):
     ext = os.path.splitext(img_url)[1]
     ext = ext.lower()
-    path = os.path.join(SAVE_PATH, name + ext)
+    path = os.path.join(IMG_SAVE_PATH, name + ext)
     return path
 
 
-def download_image(img_url, name):
+def download_image(img_url, name, cached=True):
     headers = {
         'User-Agent': ua.random,
     }
 
     path = get_image_path(img_url, name)
-    if os.path.exists(path):
-        return
+    if cached and os.path.exists(path):
+        return path
 
     r = requests.get(img_url, stream=True, allow_redirects=True, verify=False, headers=headers)
     if r.status_code == 200:
@@ -47,19 +44,18 @@ def download_image(img_url, name):
     else:
         print(f'warning: file {img_url} ({word}) returned code {r.status_code}')
 
+    return path
+
 
 if __name__ == '__main__':
     redis = get_redis()
-
-    with open('../data/cross_used_words_1.txt', 'r') as f:
-        words = f.readlines()
-    words = list(map(str.strip, words))
+    words = cross_used_words()
 
     all_images = {}
 
     for word in tqdm(words):
         wd = WordDefs(redis, word)
-        img = get_image_url(wd)
+        img = wd.image_url
         all_images[word] = img
         if img:
             download_image(img, word)
