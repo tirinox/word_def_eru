@@ -1,26 +1,19 @@
-FROM python:3-alpine
+# Use official Python image
+FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-RUN apk add  --update --no-cache build-base py3-configobj py3-pip py3-setuptools python3 python3-dev  \
-                       # Pillow dependencies
-                       jpeg-dev \
-                       zlib-dev \
-                       libwebp-dev \
-                       freetype-dev \
-                       lcms2-dev \
-                       openjpeg-dev \
-                       tiff-dev \
-                       tk-dev \
-                       tcl-dev \
-                       harfbuzz-dev \
-                       fribidi-dev
+# Copy only requirements first (for better caching)
+COPY requirements.txt .
 
-#ENV LIBRARY_PATH=/lib:/usr/lib
-
-COPY requirements.txt /app
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app
+# Copy app code
+COPY . .
 
-CMD python server.py
+EXPOSE 34001
+
+# Run the app
+CMD ["python", "server.py"]

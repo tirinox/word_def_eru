@@ -1,11 +1,9 @@
-DEBUG = False
-PORT = 34001
-
 from flask import Flask, request
+
 from util import *
 from word_defs import WordDefs
-from word_usage import WordUsage
 from word_permutation import WordPermutations
+from word_usage import WordUsage
 
 redis_db = get_redis()
 

@@ -1,8 +1,6 @@
-import operator
-
-from tqdm import tqdm
 import csv
 
+from tqdm import tqdm
 
 PERM_POP_FILE = '../data/permutations.csv'
 LANG = 'RUS'
