@@ -35,6 +35,7 @@ run: # Reindex the database.
 		--name word_def_instance \
 		--net=word_def_network \
 		--restart="always" \
+		-p 127.0.0.1:34001:34001 \
 		word-def-local
 
 
