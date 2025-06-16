@@ -23,7 +23,7 @@ run: # Reindex the database.
 		-v "$(PWD)/data/redisdata:/data" \
 		--user $(shell id -u):$(shell id -g) \
 		redis:latest \
-		redis-server --save 60 1 --dir /data --umask 007
+		redis-server --save 60 1 --dir /data
 
 	# Stop & remove app instance
 	- docker stop word_def_instance
@@ -36,3 +36,19 @@ run: # Reindex the database.
 		--net=word_def_network \
 		--restart="always" \
 		word-def-local
+
+
+.PHONY: stop
+stop: # Stop and delete Docker container if it exists
+	docker stop push_eru_service_i || true
+	docker rm push_eru_service_i || true
+
+
+.PHONY: redeploy
+redeploy:  # Git pull and redeploy the service.
+	git pull
+	# stop
+	$(MAKE) stop
+	$(MAKE) build
+	$(MAKE) run
+
