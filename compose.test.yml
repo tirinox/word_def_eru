@@ -1,0 +1,41 @@
+name: word-def-test
+
+services:
+  redis:
+    image: redis:8.10.1-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    tmpfs:
+      - /data
+
+  app:
+    build:
+      context: .
+      target: production
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  tests:
+    build:
+      context: .
+      target: test
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      RUN_REDIS_INTEGRATION: "1"
+      SERVICE_URL: http://app:34001
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy

@@ -15,6 +15,9 @@ changes backed by characterization tests.
 - `util.py` contains shared Redis, HTTP response, validation, and collection
   helpers.
 - `config.py` contains runtime defaults.
+- `gunicorn.conf.py` contains production WSGI defaults.
+- `compose.test.yml` defines the isolated Redis integration-test environment;
+  production orchestration lives outside this repository.
 - `tools/` contains offline and administrative scripts; some scripts read or
   mutate production-shaped Redis/MySQL data.
 - `data/` contains large source and generated datasets. Treat their schemas and
@@ -91,6 +94,14 @@ Redis instance configured by `config.py` and mutate test keys):
 Before running Redis-backed tests, confirm that the configured database is safe
 to mutate. New unit tests should prefer a fake Redis implementation or mocks so
 they are deterministic and isolated.
+
+Run Redis integration tests only through the dedicated Compose project:
+
+```sh
+docker compose -f compose.test.yml up --build --abort-on-container-exit \
+  --exit-code-from tests
+docker compose -f compose.test.yml down --volumes
+```
 
 For API work, add Flask test-client coverage for both success and error response
 shapes. For Redis work, test both empty state and legacy stored representations.
