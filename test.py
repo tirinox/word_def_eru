@@ -2,6 +2,8 @@ from util import *
 from word_defs import WordDefs
 import pytest
 
+from tests.fake_redis import FakeRedis
+
 
 LIST_0 = lambda: [1, 2, 3, 4, 5, 6]
 
@@ -79,7 +81,7 @@ def test_move_top():
 @pytest.fixture()
 def an_empty_word_def():
     word = 'эйлерс'
-    r = get_redis()
+    r = FakeRedis()
     wd = WordDefs(r, word)
     wd.delete()
     yield WordDefs(r, word)
@@ -88,7 +90,7 @@ def an_empty_word_def():
 
 @pytest.fixture()
 def redis_db():
-    return get_redis()
+    return FakeRedis()
 
 
 def test_add_defs(an_empty_word_def: WordDefs):
@@ -116,8 +118,10 @@ def test_add_defs(an_empty_word_def: WordDefs):
 
 def test_ve(redis_db):
     wd = WordDefs(redis_db, 'ВЕ')
-    wd.append_word_defs([
+    added = wd.append_word_defs([
         {
             'text': 'efflj weflej lwefj jwelfjwe flewjf wlfjwelj fweflw fjlwe'
         }
     ])
+    assert added is True
+    assert len(wd.get_defs()) == 1

@@ -1,3 +1,14 @@
+Local development
+
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+
+The test suite uses an in-memory Redis substitute and does not require or
+modify a local Redis database.
+
+------------------------------------------------------------------------------------------------------------------------
+
 1. Run Redis locally
 
 redis-server /usr/local/etc/redis.conf

@@ -7,8 +7,9 @@ WORKDIR /app
 # Copy only requirements first (for better caching)
 COPY requirements_strict.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements_strict.txt
+# Install the pinned build tool and application dependencies
+RUN python -m pip install --no-cache-dir --upgrade pip==26.2.1 \
+    && python -m pip install --no-cache-dir -r requirements_strict.txt
 
 # Copy app code
 COPY . .
