@@ -1,4 +1,6 @@
-Local development
+# word_def
+
+## Local development
 
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
@@ -7,50 +9,22 @@ python3 -m venv .venv
 The test suite uses an in-memory Redis substitute and does not require or
 modify a local Redis database.
 
-------------------------------------------------------------------------------------------------------------------------
+## Redis and HTTP integration tests
 
-1. Run Redis locally
+Run integration tests in the isolated Docker Compose project:
 
-redis-server /usr/local/etc/redis.conf
+docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+docker compose -f compose.test.yml down --volumes
 
-------------------------------------------------------------------------------------------------------------------------
+## Production image
 
-2. Copy Redis DB from Hetzner to local db dir (macbook air)
-(not docker)
+Production containers are managed by an external Docker Compose project. Build
+the final `production` stage of `Dockerfile`. The image runs Gunicorn as an
+unprivileged user and exposes the application on port 34001 by default.
 
-scp hetzner:/var/lib/redis/dump.rdb /usr/local/var/db/redis
+Supported environment variables: REDIS_HOST, REDIS_PORT, REDIS_DB, PORT,
+PERMUT_BATCH_SIZE, WEB_CONCURRENCY, GUNICORN_THREADS, GUNICORN_TIMEOUT and
+GUNICORN_GRACEFUL_TIMEOUT.
 
-for docker:
-
-1) stop redis in docker
-2) replace dump.rdb in compose_erudite/redisdata
-
-------------------------------------------------------------------------------------------------------------------------
-
-3. Erudite admin: add word defs from MySQL to Redis:
-
-{
-  "method": "temporaryWordDefsProcessing"
-}
-
-------------------------------------------------------------------------------------------------------------------------
-
-4. Redis get dir
-
-redis-cli
-config get dir
-
-------------------------------------------------------------------------------------------------------------------------
-
-
-~~~~~~
-
-How to run purify_defs.py
-
-docker ps | grep word_def
-docker exec -it 0711 /bin/sh
-cd tools && PYTHONPATH=.. python3 purify_defs.py
-
-
-cd tools
-PYTHONPATH=.. python3 reupload_img_full_pipeline.py
+The scripts in `tools/` are administrative operations, not container startup
+helpers. Review their data sources and side effects before running them.

@@ -4,9 +4,10 @@
 
 Запуск:
 
-    docker exec -it docker_word_def_1 bash
-    cd tools
-    PYTHONPATH='..' python upload_perm_and_pop.py
+    PYTHONPATH=. .venv/bin/python tools/upload_perm_and_pop.py
+
+Перед запуском явно задайте REDIS_HOST, REDIS_PORT и REDIS_DB: скрипт удаляет
+старые корзины перестановок в выбранной базе Redis.
 
 """
 from tqdm import tqdm
