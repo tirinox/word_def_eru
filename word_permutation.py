@@ -12,7 +12,7 @@ class WordPermutations:
         '21-30': (21, 30),
         '31-40': (31, 40),
         '41-50': (41, 50),
-        '51-75': (50, 75),
+        '51-75': (51, 75),
         '76-100': (76, 100),
         '> 100': (101, 100000)
     }
@@ -62,7 +62,7 @@ class WordPermutations:
         items = list(items)
         if not items:
             return []
-        batch = random.sample(items, batch_size)
+        batch = random.sample(items, min(batch_size, len(items)))
         batch.sort(key=itemgetter(1), reverse=True)  # sort by rating descending
         return [{
             'word': word,

@@ -88,9 +88,14 @@ def json_pp(json_data):
 
 
 def get_word_from_request(content):
-    word = content if type(content) is str else content['word']
-    word_len = len(word)
-    if not isinstance(word, str) or word_len < 2 or word_len > 30:
+    if isinstance(content, str):
+        word = content
+    elif isinstance(content, dict):
+        word = content.get('word')
+    else:
+        word = None
+
+    if not isinstance(word, str) or len(word) < 2 or len(word) > 30:
         raise Exception('invalid word')
 
     word = word.upper()

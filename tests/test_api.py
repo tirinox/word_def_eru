@@ -90,12 +90,28 @@ def test_permutation_storage_and_sampling(monkeypatch, redis_db):
     ]
 
 
-def test_underfilled_permutation_bucket_keeps_current_error(redis_db):
+def test_permutation_bucket_boundaries_do_not_overlap(redis_db):
+    permutations = WordPermutations(redis_db)
+
+    assert permutations.bucket_from_variant_count(50) == "41-50"
+    assert permutations.bucket_from_variant_count(51) == "51-75"
+
+
+def test_underfilled_permutation_bucket_returns_all_available_items(redis_db):
     permutations = WordPermutations(redis_db)
     permutations.add_to_list("WORD", 10, 4)
 
-    with pytest.raises(ValueError, match="Sample larger than population"):
-        permutations.subsample(permutations.get_all_from_bucket(4, "<5"), 2)
+    assert permutations.subsample(
+        permutations.get_all_from_bucket(4, "<5"), 2
+    ) == [{"word": "WORD", "rating": 10, "variants": 4}]
+
+
+@pytest.mark.parametrize("content", [None, [], {}, {"word": None}, {"word": "x"}])
+def test_invalid_word_input_uses_historical_error(content):
+    from util import get_word_from_request
+
+    with pytest.raises(Exception, match="invalid word"):
+        get_word_from_request(content)
 
 
 def test_api_definition_and_usage_response_shapes(client):
@@ -143,3 +159,15 @@ def test_empty_permutation_api_response(client):
 
     assert response.status_code == 200
     assert response.get_json() == {"permuts": [], "result": "ok"}
+
+
+def test_underfilled_permutation_api_returns_available_items(client, redis_db):
+    WordPermutations(redis_db, "RUS").add_to_list("WORD", 10, 4)
+
+    response = client.get("/permuts/RUS/4/%3C5")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "permuts": [{"word": "WORD", "rating": 10, "variants": 4}],
+        "result": "ok",
+    }
