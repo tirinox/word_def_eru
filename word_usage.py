@@ -1,6 +1,7 @@
 from util import *
 import math
 from redis import Redis
+from redis.exceptions import WatchError
 
 
 class WordUsage:
@@ -21,12 +22,24 @@ class WordUsage:
 
     def increment_word_usage(self):
         key = self.word_usage_key()
+        cur_wu = self.r.incr(key)
 
-        self.r.incr(key)
+        while True:
+            try:
+                with self.r.pipeline() as pipeline:
+                    pipeline.watch(self.KEY_MAX_WORD_USAGE)
+                    stored_max = pipeline.get(self.KEY_MAX_WORD_USAGE)
+                    max_wu = int_or_default(stored_max, 1)
+                    if stored_max is not None and cur_wu <= max_wu:
+                        pipeline.unwatch()
+                        return
 
-        cur_wu = int_or_default(self.r.get(key))
-        max_wu = max(self.get_max_usage(), cur_wu)
-        self.r.set(self.KEY_MAX_WORD_USAGE, max_wu)
+                    pipeline.multi()
+                    pipeline.set(self.KEY_MAX_WORD_USAGE, max(max_wu, cur_wu))
+                    pipeline.execute()
+                    return
+            except WatchError:
+                continue
 
     def get_word_usage_count(self):
         this_word_usage = self.r.get(self.word_usage_key())
@@ -54,9 +67,23 @@ class WordUsage:
         return self.r.keys('wms_*')
 
     def update_max_score(self, profile_id, score):
-        old_profile_id, old_score = self.get_best_profile_id_and_score()
-        if old_score < score:
-            self.r.set(self.word_max_score_key(), '{}:{}'.format(profile_id, score))
+        key = self.word_max_score_key()
+        while True:
+            try:
+                with self.r.pipeline() as pipeline:
+                    pipeline.watch(key)
+                    current = pipeline.get(key)
+                    old_score = int(current.split(':')[1]) if current else 0
+                    if old_score >= score:
+                        pipeline.unwatch()
+                        return
+
+                    pipeline.multi()
+                    pipeline.set(key, '{}:{}'.format(profile_id, score))
+                    pipeline.execute()
+                    return
+            except WatchError:
+                continue
 
     def get_best_profile_id_and_score(self):
         key = self.word_max_score_key()

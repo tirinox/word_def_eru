@@ -68,6 +68,7 @@ def test_word_usage_preserves_rate_and_best_score_rules(redis_db):
     }
 
     usage.increment_word_usage()
+    assert redis_db.get(WordUsage.KEY_MAX_WORD_USAGE) == "1"
     usage.update_max_score(10, 20)
     usage.update_max_score(11, 20)
 
@@ -114,6 +115,20 @@ def test_invalid_word_input_uses_historical_error(content):
         get_word_from_request(content)
 
 
+@pytest.mark.parametrize(
+    ("definition", "message"),
+    [
+        ({"text": "too short"}, "invalid definition text"),
+        ({"text": "x" * 513}, "invalid definition text"),
+        ({"text": "valid definition", "dic": "x" * 256}, "invalid dictionary name"),
+        ({"text": "valid definition", "imageURL": "x" * 1024}, "invalid image URL"),
+    ],
+)
+def test_definition_limits_are_enforced_without_assert(redis_db, definition, message):
+    with pytest.raises(Exception, match=message):
+        WordDefs(redis_db, "word").append_word_defs(definition)
+
+
 def test_api_definition_and_usage_response_shapes(client):
     add_response = client.post("/add", json={
         "word": "test",
@@ -152,6 +167,19 @@ def test_api_error_envelope_is_unchanged(client):
 
     assert response.status_code == 500
     assert response.get_json() == {"result": "error", "message": "invalid word"}
+
+
+def test_invalid_definition_keeps_historical_500_status(client):
+    response = client.post("/add", json={
+        "word": "test",
+        "defs": [{"text": "too short"}],
+    })
+
+    assert response.status_code == 500
+    assert response.get_json() == {
+        "result": "error",
+        "message": "invalid definition text",
+    }
 
 
 def test_empty_permutation_api_response(client):

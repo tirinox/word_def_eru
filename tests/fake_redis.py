@@ -54,3 +54,46 @@ class FakeRedis:
 
     def save(self):
         return True
+
+    def pipeline(self):
+        return FakePipeline(self)
+
+
+class FakePipeline:
+    def __init__(self, redis):
+        self._redis = redis
+        self._commands = []
+        self._in_transaction = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.reset()
+
+    def watch(self, *keys):
+        return True
+
+    def unwatch(self):
+        return True
+
+    def get(self, key):
+        return self._redis.get(key)
+
+    def multi(self):
+        self._in_transaction = True
+
+    def set(self, key, value):
+        if self._in_transaction:
+            self._commands.append((self._redis.set, (key, value)))
+            return self
+        return self._redis.set(key, value)
+
+    def execute(self):
+        results = [command(*args) for command, args in self._commands]
+        self.reset()
+        return results
+
+    def reset(self):
+        self._commands = []
+        self._in_transaction = False

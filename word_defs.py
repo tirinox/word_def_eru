@@ -1,4 +1,5 @@
 from util import *
+from redis.exceptions import WatchError
 
 
 class WordDefs:
@@ -50,19 +51,44 @@ class WordDefs:
 
     def save_to_redis(self):
         key = self.word_def_key()
-        def_json = json.dumps({
-            'word': self.word,
-            'defs': self._defs
-        }, ensure_ascii=False)
-        self.r.set(key, def_json)
+        self.r.set(key, self._encode_db_value(self.word, self._defs))
 
-    def _find_definition(self, needle_text):
-        for current_def in self._defs:
-            if 'text' in current_def:
-                current_def_text = current_def['text']
-                if current_def_text == needle_text:
-                    return True
-        return False
+    @staticmethod
+    def _encode_db_value(word, defs):
+        return json.dumps({
+            'word': word,
+            'defs': defs
+        }, ensure_ascii=False)
+
+    def _state_from_db_value(self, value):
+        decoded = self.decode_db_value(value)
+        if isinstance(decoded, dict):
+            return decoded.get('word', self.word), decoded.get('defs', [])
+        if isinstance(decoded, list):
+            return self.word, decoded
+        return self.word, []
+
+    def _update_atomically(self, update):
+        key = self.word_def_key()
+        while True:
+            try:
+                with self.r.pipeline() as pipeline:
+                    pipeline.watch(key)
+                    word, defs = self._state_from_db_value(pipeline.get(key))
+                    changed, result = update(defs)
+
+                    if changed:
+                        pipeline.multi()
+                        pipeline.set(key, self._encode_db_value(word, defs))
+                        pipeline.execute()
+                    else:
+                        pipeline.unwatch()
+
+                    self.word = word
+                    self._defs = defs
+                    return result
+            except WatchError:
+                continue
 
     @staticmethod
     def decode_db_value(v):
@@ -82,21 +108,30 @@ class WordDefs:
 
     def _check_ident(self, ident):
         self.load_defs()
+        return self._check_ident_in_defs(ident, self._defs)
+
+    @staticmethod
+    def _check_ident_in_defs(ident, defs):
         ident = int(ident)
-        if ident < 0 or ident >= len(self._defs):
+        if ident < 0 or ident >= len(defs):
             raise Exception('ident out of range')
         return ident
 
     def remove_def(self, ident):
-        ident = self._check_ident(ident)
-        del self._defs[ident]
-        self.save_to_redis()
+        def remove(defs):
+            checked_ident = self._check_ident_in_defs(ident, defs)
+            del defs[checked_ident]
+            return True, None
+
+        return self._update_atomically(remove)
 
     def move_def(self, ident, direction):
-        ident = self._check_ident(ident)
-        items = self._defs
-        move_element_in_list(items, ident, direction)
-        self.save_to_redis()
+        def move(defs):
+            checked_ident = self._check_ident_in_defs(ident, defs)
+            move_element_in_list(defs, checked_ident, direction)
+            return True, None
+
+        return self._update_atomically(move)
 
     def load_defs(self, forced=False):
         if forced or not self._defs:
@@ -116,9 +151,12 @@ class WordDefs:
         image_url = str(new_definition.get('imageURL', ''))
         dic = str(new_definition.get('dic', 'internal'))
 
-        assert len(dic) < self.MAX_DIC_NAME_LEN
-        assert len(image_url) < self.MAX_URL_LEN
-        assert isinstance(text, str) and len(text) >= 10
+        if len(text) < 10 or len(text) > self.MAX_DEF_LEN:
+            raise Exception('invalid definition text')
+        if len(dic) >= self.MAX_DIC_NAME_LEN:
+            raise Exception('invalid dictionary name')
+        if len(image_url) >= self.MAX_URL_LEN:
+            raise Exception('invalid image URL')
 
         new_def = {'text': text}
         if image_url:
@@ -128,42 +166,45 @@ class WordDefs:
         return new_def
 
     def update_def(self, ident, new_def):
-        ident = self._check_ident(ident)
         new_def = self._clean_def(new_def)
-        self._defs[ident] = new_def
-        self.save_to_redis()
+
+        def update(defs):
+            checked_ident = self._check_ident_in_defs(ident, defs)
+            defs[checked_ident] = new_def
+            return True, None
+
+        return self._update_atomically(update)
 
     def append_word_defs(self, new_defs):
         """
         :param new_defs: list of [{'text': ...., 'imageURL': ???, 'dic': ???}]
         :return: WordDef updated
         """
-        self.load_defs()
-
-        not_image_yet = not self.has_image(self._defs)
-
         if not isinstance(new_defs, (list, tuple)):
             new_defs = [new_defs]
+        new_defs = [self._clean_def(definition) for definition in new_defs]
 
-        prepend_list = []
+        def append(defs):
+            not_image_yet = not self.has_image(defs)
+            prepend_list = []
+            updated = False
 
-        updated = False
-        for new_definition in new_defs:
-            new_definition = self._clean_def(new_definition)
-            text = new_definition['text']
+            for new_definition in new_defs:
+                text = new_definition['text']
 
-            if not_image_yet and self.has_image([new_definition]):
-                prepend_list.append(new_definition)
-                updated = True
-                not_image_yet = False
-            elif not self._find_definition(text):
-                prepend_list.append(new_definition)
-                updated = True
+                if not_image_yet and self.has_image([new_definition]):
+                    prepend_list.append(new_definition)
+                    updated = True
+                    not_image_yet = False
+                elif not any(d.get('text') == text for d in defs):
+                    prepend_list.append(new_definition)
+                    updated = True
 
-        if updated:
-            self._defs = prepend_list + self._defs
-            self.save_to_redis()
-        return updated
+            if updated:
+                defs[:0] = prepend_list
+            return updated, updated
+
+        return self._update_atomically(append)
 
     def is_there_definition(self, count_empty=True):
         entry = self.r.get(self.word_def_key())
