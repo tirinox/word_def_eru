@@ -1,4 +1,5 @@
 import pytest
+from urllib.parse import quote
 
 import server
 from tests.fake_redis import FakeRedis
@@ -160,6 +161,21 @@ def test_api_definition_and_usage_response_shapes(client):
         "best": {"profile_id": 7, "score": 42},
         "result": "ok",
     }
+
+
+def test_higher_score_by_another_player_replaces_best(client):
+    # PHP sends urlencode(strWord), e.g. /use/%D0%9C%D0%9E%D0%A0%D0%95/by/7/score/42
+    word = quote("море")
+
+    assert client.get(f"/use/{word}/by/7/score/42").get_json()["best"] == {"profile_id": 7, "score": 42}
+    assert client.get(f"/use/{word}/by/8/score/50").get_json()["best"] == {"profile_id": 8, "score": 50}
+    assert client.get(f"/use/{word}/by/9/score/30").get_json()["best"] == {"profile_id": 8, "score": 50}
+    assert client.get(f"/use/{word}/by/9/score/50").get_json()["best"] == {"profile_id": 8, "score": 50}
+
+    usage = client.get(f"/usage/{word}").get_json()
+    assert usage["word"] == "МОРЕ"
+    assert usage["usage"] == 4
+    assert usage["best"] == {"profile_id": 8, "score": 50}
 
 
 def test_api_error_envelope_is_unchanged(client):
