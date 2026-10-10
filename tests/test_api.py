@@ -8,6 +8,10 @@ from word_permutation import WordPermutations
 from word_usage import WordUsage
 
 
+def best(b):
+    return {k: b[k] for k in ("profile_id", "score")}
+
+
 @pytest.fixture()
 def redis_db():
     return FakeRedis()
@@ -59,24 +63,26 @@ def test_definition_edit_move_and_remove(redis_db):
     ]
 
 
-def test_word_usage_preserves_rate_and_best_score_rules(redis_db):
+def test_word_usage_preserves_rate_and_best_score_rules(monkeypatch, redis_db):
     usage = WordUsage(redis_db, "WORD")
     assert usage.to_json() == {
         "word": "WORD",
         "usage": 0,
         "rate": 0.0,
-        "best": {"profile_id": 0, "score": 0},
+        "best": {"profile_id": 0, "score": 0, "updated_at": None},
     }
 
     usage.increment_word_usage()
     assert redis_db.get(WordUsage.KEY_MAX_WORD_USAGE) == "1"
-    usage.update_max_score(10, 20)
-    usage.update_max_score(11, 20)
+    monkeypatch.setattr("word_usage.time.time", lambda: 1000.9)
+    assert usage.update_max_score(10, 20) is True
+    monkeypatch.setattr("word_usage.time.time", lambda: 2000)
+    assert usage.update_max_score(11, 20) is False
 
     result = usage.to_json()
     assert result["usage"] == 1
     assert result["rate"] == 100.0
-    assert result["best"] == {"profile_id": 10, "score": 20}
+    assert result["best"] == {"profile_id": 10, "score": 20, "updated_at": 1000}
 
 
 def test_permutation_storage_and_sampling(monkeypatch, redis_db):
@@ -130,7 +136,7 @@ def test_definition_limits_are_enforced_without_assert(redis_db, definition, mes
         WordDefs(redis_db, "word").append_word_defs(definition)
 
 
-def test_api_definition_and_usage_response_shapes(client):
+def test_api_definition_and_usage_response_shapes(client, monkeypatch):
     add_response = client.post("/add", json={
         "word": "test",
         "defs": [{"text": "test definition"}],
@@ -147,35 +153,62 @@ def test_api_definition_and_usage_response_shapes(client):
         "word": "TEST",
         "usage": 0,
         "rate": 0.0,
-        "best": {"profile_id": 0, "score": 0},
+        "best": {"profile_id": 0, "score": 0, "updated_at": None},
         "defs": [{"text": "test definition", "dic": "internal", "id": 0}],
         "result": "ok",
     }
 
+    monkeypatch.setattr("word_usage.time.time", lambda: 1700000000)
     usage_response = client.get("/use/test/by/7/score/42")
     assert usage_response.status_code == 200
     assert usage_response.get_json() == {
         "word": "TEST",
         "usage": 1,
         "rate": 100.0,
-        "best": {"profile_id": 7, "score": 42},
+        "best": {"profile_id": 7, "score": 42, "updated_at": 1700000000},
+        "new_record": True,
         "result": "ok",
     }
+
+
+def test_legacy_record_without_time_reports_null_updated_at(redis_db):
+    redis_db.set(WordUsage(redis_db, "OLD").word_max_score_key(), "5:30")
+
+    assert WordUsage(redis_db, "OLD").to_json()["best"] == {
+        "profile_id": 5, "score": 30, "updated_at": None
+    }
+
+
+def test_use_response_flags_new_record(client, monkeypatch):
+    monkeypatch.setattr("word_usage.time.time", lambda: 1234)
+
+    first = client.get("/use/test/by/7/score/42").get_json()
+    assert first["new_record"] is True
+    assert first["best"] == {"profile_id": 7, "score": 42, "updated_at": 1234}
+
+    monkeypatch.setattr("word_usage.time.time", lambda: 5678)
+    tie = client.get("/use/test/by/8/score/42").get_json()
+    assert tie["new_record"] is False
+    assert tie["best"]["updated_at"] == 1234
+
+    assert client.get("/use/test/by/8/score/43").get_json()["new_record"] is True
+    assert "new_record" not in client.get("/use/test").get_json()
+    assert "new_record" not in client.get("/usage/test").get_json()
 
 
 def test_higher_score_by_another_player_replaces_best(client):
     # PHP sends urlencode(strWord), e.g. /use/%D0%9C%D0%9E%D0%A0%D0%95/by/7/score/42
     word = quote("море")
 
-    assert client.get(f"/use/{word}/by/7/score/42").get_json()["best"] == {"profile_id": 7, "score": 42}
-    assert client.get(f"/use/{word}/by/8/score/50").get_json()["best"] == {"profile_id": 8, "score": 50}
-    assert client.get(f"/use/{word}/by/9/score/30").get_json()["best"] == {"profile_id": 8, "score": 50}
-    assert client.get(f"/use/{word}/by/9/score/50").get_json()["best"] == {"profile_id": 8, "score": 50}
+    assert best(client.get(f"/use/{word}/by/7/score/42").get_json()["best"]) == {"profile_id": 7, "score": 42}
+    assert best(client.get(f"/use/{word}/by/8/score/50").get_json()["best"]) == {"profile_id": 8, "score": 50}
+    assert best(client.get(f"/use/{word}/by/9/score/30").get_json()["best"]) == {"profile_id": 8, "score": 50}
+    assert best(client.get(f"/use/{word}/by/9/score/50").get_json()["best"]) == {"profile_id": 8, "score": 50}
 
     usage = client.get(f"/usage/{word}").get_json()
     assert usage["word"] == "МОРЕ"
     assert usage["usage"] == 4
-    assert usage["best"] == {"profile_id": 8, "score": 50}
+    assert best(usage["best"]) == {"profile_id": 8, "score": 50}
 
 
 def test_api_error_envelope_is_unchanged(client):

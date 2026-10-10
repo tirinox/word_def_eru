@@ -87,9 +87,9 @@ def use_word_ext(word, profile_id, score):
 
     wu = WordUsage(redis_db, word)
     wu.increment_word_usage()
-    wu.update_max_score(profile_id, score)
+    new_record = wu.update_max_score(profile_id, score)
 
-    return wu.to_json()
+    return {**wu.to_json(), 'new_record': new_record}
 
 
 @app.route('/use/<string:word>')

@@ -1,5 +1,6 @@
 from util import *
 import math
+import time
 from redis import Redis
 from redis.exceptions import WatchError
 
@@ -63,10 +64,14 @@ class WordUsage:
     def word_max_score_key(self):
         return 'wms_' + self._hash
 
+    def word_max_score_time_key(self):
+        return 'wmt_' + self._hash
+
     def all_hashes_for_profiles(self):
         return self.r.keys('wms_*')
 
     def update_max_score(self, profile_id, score):
+        """Store the score if it beats the current record; return True when it did."""
         key = self.word_max_score_key()
         while True:
             try:
@@ -76,12 +81,13 @@ class WordUsage:
                     old_score = int(current.split(':')[1]) if current else 0
                     if old_score >= score:
                         pipeline.unwatch()
-                        return
+                        return False
 
                     pipeline.multi()
                     pipeline.set(key, '{}:{}'.format(profile_id, score))
+                    pipeline.set(self.word_max_score_time_key(), int(time.time()))
                     pipeline.execute()
-                    return
+                    return True
             except WatchError:
                 continue
 
@@ -89,6 +95,13 @@ class WordUsage:
         key = self.word_max_score_key()
         s = self.r.get(key)
         return tuple(int(x) for x in s.split(':')) if s else (0, 0)
+
+    def get_best_updated_at(self):
+        """Unix time the record was set; None for records stored before it was tracked."""
+        if not self.r.get(self.word_max_score_key()):
+            return None
+        t = self.r.get(self.word_max_score_time_key())
+        return int(t) if t else None
 
     def to_json(self):
         profile_id, score = self.get_best_profile_id_and_score()
@@ -99,6 +112,7 @@ class WordUsage:
             'rate': self.get_word_usage_rate(count),
             'best': {
                 'profile_id': profile_id,
-                'score': score
+                'score': score,
+                'updated_at': self.get_best_updated_at()
             }
         }
