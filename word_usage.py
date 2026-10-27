@@ -91,6 +91,13 @@ class WordUsage:
             except WatchError:
                 continue
 
+    def set_max_score(self, profile_id, score):
+        """Admin override: store the record unconditionally, even below the current one."""
+        with self.r.pipeline() as pipeline:
+            pipeline.set(self.word_max_score_key(), '{}:{}'.format(profile_id, score))
+            pipeline.set(self.word_max_score_time_key(), int(time.time()))
+            pipeline.execute()
+
     def get_best_profile_id_and_score(self):
         key = self.word_max_score_key()
         s = self.r.get(key)

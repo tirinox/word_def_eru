@@ -211,6 +211,25 @@ def test_higher_score_by_another_player_replaces_best(client):
     assert best(usage["best"]) == {"profile_id": 8, "score": 50}
 
 
+def test_admin_record_override_replaces_even_higher_record(client, monkeypatch):
+    word = quote("эфират")
+    client.get(f"/use/{word}/by/7/score/111")
+
+    monkeypatch.setattr("word_usage.time.time", lambda: 4321)
+    result = client.post(f"/record/{word}", json={"profile_id": 1876926, "score": 126}).get_json()
+    assert result["best"] == {"profile_id": 1876926, "score": 126, "updated_at": 4321}
+    assert result["usage"] == 1
+
+    lowered = client.post(f"/record/{word}", json={"profile_id": 8, "score": 50}).get_json()
+    assert best(lowered["best"]) == {"profile_id": 8, "score": 50}
+
+    for bad in ({"profile_id": 0, "score": 5}, {"profile_id": 5, "score": 0}, {"profile_id": "5", "score": 5}, None):
+        response = client.post(f"/record/{word}", json=bad)
+        assert response.status_code == 500
+        assert response.get_json()["result"] == "error"
+    assert best(client.get(f"/usage/{word}").get_json()["best"]) == {"profile_id": 8, "score": 50}
+
+
 def test_api_error_envelope_is_unchanged(client):
     response = client.post("/add", json={"word": "x", "defs": []})
 

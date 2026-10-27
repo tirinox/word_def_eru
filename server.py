@@ -103,6 +103,24 @@ def use_word(word):
     return wu.to_json()
 
 
+@app.route('/record/<string:word>', methods=['POST'])
+@fail_safe_json_responder
+def set_record(word):
+    word = get_word_from_request(word)
+    content = request.get_json(silent=True) or {}
+    profile_id = content.get('profile_id')
+    score = content.get('score')
+    if not isinstance(profile_id, int) or isinstance(profile_id, bool) or profile_id <= 0:
+        raise Exception('invalid profile_id')
+    if not isinstance(score, int) or isinstance(score, bool) or score <= 0:
+        raise Exception('invalid score')
+
+    wu = WordUsage(redis_db, word)
+    wu.set_max_score(profile_id, score)
+
+    return wu.to_json()
+
+
 @app.route('/usage/<string:word>')
 @fail_safe_json_responder
 def get_word_usage(word):
